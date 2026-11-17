@@ -76,7 +76,7 @@ export async function loadGameData(): Promise<GameData> {
     ]);
 
 
-    if (topicRows.length < 58 || blockRows.length !== 6) {
+    if (topicRows.length < 58 || blockRows.length !== 6 || questionRows.length < 200) {
       await ensureSeed(true);
       return buildFallbackGameData();
     }

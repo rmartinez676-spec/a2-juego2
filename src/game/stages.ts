@@ -108,13 +108,19 @@ export function makeEngineConfig(stage: Stage, data: GameData, difficulty: Diffi
           { name: topic.tipName, role: topic.tipRole, lines: topic.tipLines },
         ].filter((n) => n.lines.length > 0)
       : [];
-    const questions = topic?.questions ?? [];
+    const topicQuestions = topic?.questions ?? [];
+    const blockQuestions = block?.topics.flatMap((t) => t.questions) ?? [];
+    const otherBlockQuestions = blockQuestions.filter(
+      (bq) => !topicQuestions.some((tq) => tq.prompt === bq.prompt),
+    );
+    // Prioritize topic questions first, then related questions from the same block
+    const pool = [...topicQuestions, ...otherBlockQuestions];
     return {
       ...base,
       mode: "topic",
       npcs,
-      pool: questions,
-      testQuestions: questions,
+      pool: pool.length > 0 ? pool : allQuestions,
+      testQuestions: topicQuestions.length >= 3 ? topicQuestions : (pool.length > 0 ? pool : allQuestions),
       passMin: difficulty === "easy" ? 2 : 3,
       music: variantMusic(theme.music, variant),
       musicId: `${themeKey}:topic:${variant}`,

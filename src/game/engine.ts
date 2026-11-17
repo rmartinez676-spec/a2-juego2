@@ -236,6 +236,7 @@ export class GameEngine {
   private camX = 0;
   private goalX = 0;
   private lastOverlay: Overlay | null = null;
+  private seenQuestionPrompts: Set<string> = new Set();
 
   constructor(canvas: HTMLCanvasElement, cfg: EngineConfig, onChange: (s: Snapshot) => void) {
     const g = canvas.getContext("2d");
@@ -278,8 +279,8 @@ export class GameEngine {
     this.projs = [];
     this.texts = [];
     this.buildLevel();
-    this.bumpDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
-    this.bossDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
+    this.refillBumpDeck();
+    this.refillBossDeck();
     if (this.boss) {
       if (this.cfg.bossIntro.length > 0) {
         this.overlay = {
@@ -385,9 +386,20 @@ export class GameEngine {
   retryTest(): void {
     if (this.cfg.mode !== "topic") return;
     this.gateDone = false;
-    this.testDeck = shuffle(this.cfg.testQuestions)
-      .slice(0, Math.min(5, this.cfg.testQuestions.length))
-      .map((q) => randomizeQuestion(q, this.difficulty));
+    const rawPool = this.cfg.testQuestions.length > 0 ? this.cfg.testQuestions : this.cfg.pool;
+    const unseen = rawPool.filter((q) => !this.seenQuestionPrompts.has(q.prompt));
+    const targetCount = Math.min(rawPool.length, Math.min(5, Math.max(3, this.cfg.passMin)));
+    let chosen: QuestionLite[] = [];
+    if (unseen.length >= targetCount) {
+      chosen = shuffle(unseen).slice(0, targetCount);
+    } else {
+      const seen = rawPool.filter((q) => this.seenQuestionPrompts.has(q.prompt));
+      chosen = [...shuffle(unseen), ...shuffle(seen)].slice(0, targetCount);
+    }
+    for (const q of chosen) {
+      this.seenQuestionPrompts.add(q.prompt);
+    }
+    this.testDeck = chosen.map((q) => randomizeQuestion(q, this.difficulty));
     this.testIdx = 0;
     this.testScore = 0;
     this.overlay = null;
@@ -684,13 +696,31 @@ export class GameEngine {
     return res;
   }
 
+  private refillBumpDeck(): void {
+    const raw = this.cfg.pool;
+    if (raw.length === 0) return;
+    const unseen = raw.filter((q) => !this.seenQuestionPrompts.has(q.prompt));
+    const pool = unseen.length > 0 ? unseen : raw;
+    this.bumpDeck = shuffle(pool).map((q) => randomizeQuestion(q, this.difficulty));
+  }
+
+  private refillBossDeck(): void {
+    const raw = this.cfg.pool;
+    if (raw.length === 0) return;
+    const unseen = raw.filter((q) => !this.seenQuestionPrompts.has(q.prompt));
+    const pool = unseen.length > 0 ? unseen : raw;
+    this.bossDeck = shuffle(pool).map((q) => randomizeQuestion(q, this.difficulty));
+  }
+
   private bump(tx: number, ty: number): void {
     const c = this.tile(tx, ty);
     if (c === "Q") {
       this.rows[ty][tx] = "X";
       this.bumpedBlocks.push({ tx, ty, time: 0, c: "X", coinY: 0 });
       audio.sfx("bump");
-      if (this.bumpDeck.length === 0) this.bumpDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
+      if (this.bumpDeck.length === 0) {
+        this.refillBumpDeck();
+      }
       const q = this.bumpDeck.pop();
       if (!q) {
         this.addCoins(2);
@@ -698,7 +728,8 @@ export class GameEngine {
         this.popText(tx * TILE, ty * TILE - 4, "+50", "#fde047");
         return;
       }
-      this.overlay = { kind: "quiz", mode: "bump", title: "Bloque de pregunta", q: randomizeQuestion(q, this.difficulty), step: 1, total: 1, answered: null };
+      this.seenQuestionPrompts.add(q.prompt);
+      this.overlay = { kind: "quiz", mode: "bump", title: "Bloque de pregunta", q, step: 1, total: 1, answered: null };
     } else if (c === "B") {
       this.rows[ty][tx] = "X";
       this.bumpedBlocks.push({ tx, ty, time: 0, c: "X", coinY: 0 });
@@ -876,18 +907,21 @@ export class GameEngine {
       this.winBoss();
       return;
     }
-    if (this.bossDeck.length === 0) this.bossDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
+    if (this.bossDeck.length === 0) {
+      this.refillBossDeck();
+    }
     const q = this.bossDeck.pop();
     if (!q) {
       b.hp = 0;
       this.winBoss();
       return;
     }
+    this.seenQuestionPrompts.add(q.prompt);
     this.overlay = {
       kind: "quiz",
       mode: "boss",
       title: this.cfg.bossName,
-      q: randomizeQuestion(q, this.difficulty),
+      q,
       step: b.max - b.hp + 1,
       total: b.max,
       answered: null,
@@ -928,13 +962,25 @@ export class GameEngine {
   }
 
   private startTest(): void {
-    const pool = this.cfg.testQuestions;
-    if (pool.length === 0) {
+    const rawPool = this.cfg.testQuestions.length > 0 ? this.cfg.testQuestions : this.cfg.pool;
+    if (rawPool.length === 0) {
       this.overlay = { kind: "testResult", passed: true, score: 0, total: 0, min: 0 };
       audio.sfx("win");
       return;
     }
-    this.testDeck = shuffle(pool).slice(0, Math.min(5, pool.length)).map((q) => randomizeQuestion(q, this.difficulty));
+    const unseen = rawPool.filter((q) => !this.seenQuestionPrompts.has(q.prompt));
+    const targetCount = Math.min(rawPool.length, Math.min(5, Math.max(3, this.cfg.passMin)));
+    let chosen: QuestionLite[] = [];
+    if (unseen.length >= targetCount) {
+      chosen = shuffle(unseen).slice(0, targetCount);
+    } else {
+      const seen = rawPool.filter((q) => this.seenQuestionPrompts.has(q.prompt));
+      chosen = [...shuffle(unseen), ...shuffle(seen)].slice(0, targetCount);
+    }
+    for (const q of chosen) {
+      this.seenQuestionPrompts.add(q.prompt);
+    }
+    this.testDeck = chosen.map((q) => randomizeQuestion(q, this.difficulty));
     this.testIdx = 0;
     this.testScore = 0;
     this.overlay = {

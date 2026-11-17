@@ -20,9 +20,11 @@ export function ensureSeed(force = false): Promise<void> {
 async function doSeed(force = false): Promise<void> {
   if (!hasDb || !db) return;
   const expectedTotalTopics = SYLLABUS.reduce((acc, b) => acc + b.topics.length, 0);
+  const expectedTotalQuestions = SYLLABUS.reduce((acc, b) => acc + b.topics.reduce((ta, t) => ta + t.questions.length, 0), 0);
   const [{ value: currentTopics }] = await db.select({ value: count() }).from(topics);
+  const [{ value: currentQuestions }] = await db.select({ value: count() }).from(questions);
 
-  if (!force && Number(currentTopics) === expectedTotalTopics) return;
+  if (!force && Number(currentTopics) === expectedTotalTopics && Number(currentQuestions) >= expectedTotalQuestions) return;
 
   await db.transaction(async (tx) => {
     // Limpia contenido previo desfasado para sincronizar con los 58 temas oficiales del BOE
