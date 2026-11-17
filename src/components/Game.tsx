@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import { audio } from "@/game/audio";
-import { GameEngine, VIEW_H, VIEW_W, type Difficulty, type InputState, type Overlay, type Snapshot } from "@/game/engine";
+import { GameEngine, VIEW_H, VIEW_W, CANVAS_W, CANVAS_H, type Difficulty, type InputState, type Overlay, type Snapshot } from "@/game/engine";
 import { buildStages, makeEngineConfig } from "@/game/stages";
 import { THEMES, TITLE_MUSIC } from "@/game/themes";
 import type { ExitResult, GameData, Progress, Stage } from "@/game/types";
@@ -385,9 +385,9 @@ export default function Game({ data }: { data: GameData }) {
           <>
             <canvas
               ref={canvasRef}
-              width={VIEW_W}
-              height={VIEW_H}
-              className="absolute inset-0 h-full w-full [image-rendering:pixelated]"
+              width={CANVAS_W}
+              height={CANVAS_H}
+              className="absolute inset-0 h-full w-full"
             />
 
             {/* HUD */}

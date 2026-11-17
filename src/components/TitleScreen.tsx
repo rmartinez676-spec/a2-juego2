@@ -38,19 +38,22 @@ export default function TitleScreen({
     const canvas = ref.current;
     const g = canvas?.getContext("2d");
     if (!canvas || !g) return;
-    g.imageSmoothingEnabled = false;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
     let raf = 0;
     let t = 0;
-    const npcLook = R.npcLook("Don Ramón", "Conserje de la Plaza");
     const loop = () => {
       t++;
       const camX = t * 0.4;
+      g.save();
+      g.scale(3, 3);
       R.drawBackdrop(g, THEMES.plaza, camX);
       for (let x = 0; x < 22; x++) R.drawTile(g, "#", x * 16 - (camX % 16), 164, THEMES.plaza, t, false);
       const walk = 160 + Math.sin(t / 110) * 80;
       const dir = Math.cos(t / 110) >= 0 ? 1 : -1;
-      R.drawPerson(g, 36, 164, npcLook, { frame: 0 });
+      R.drawNPC(g, 36, 164, "Don Ramón", "Conserje de la Plaza", t);
       R.drawPlayer(g, walk, 164, { flip: dir < 0, state: "walk", t });
+      g.restore();
       raf = requestAnimationFrame(loop);
     };
     loop();
@@ -59,7 +62,7 @@ export default function TitleScreen({
 
   return (
     <div className="absolute inset-0 overflow-hidden select-none">
-      <canvas ref={ref} width={320} height={180} className="absolute inset-0 h-full w-full [image-rendering:pixelated]" />
+      <canvas ref={ref} width={960} height={540} className="absolute inset-0 h-full w-full" />
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/45 to-slate-950/85" />
       
       <div className="relative flex h-full flex-col items-center justify-between p-[2cqw] text-center text-white">

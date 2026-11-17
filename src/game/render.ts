@@ -13,26 +13,6 @@ export interface Look {
   glasses?: boolean;
 }
 
-export type Kind = "papeleo" | "sello" | "silencio" | "burocrata";
-
-export const PLAYER_LOOK: Look = {
-  hair: "#4a2c17",
-  skin: "#f1c7a5",
-  shirt: "#f472b6",
-  pants: "#1e3a8a",
-  longHair: true,
-};
-
-export const BUROCRATA_LOOK: Look = {
-  hair: "#9ca3af",
-  skin: "#e0ac69",
-  shirt: "#374151",
-  pants: "#1f2937",
-  tie: "#b91c1c",
-  briefcase: true,
-  glasses: true,
-};
-
 const SHIRTS = ["#e11d48", "#2563eb", "#16a34a", "#f59e0b", "#7c3aed", "#0891b2", "#be123c", "#4d7c0f"];
 const HAIRS = ["#3f2a1d", "#1f1f1f", "#b45309", "#e5e7eb", "#78350f", "#451a03"];
 const SKINS = ["#f1c7a5", "#c68642", "#8d5524", "#ffdbac", "#e0ac69"];
@@ -40,242 +20,94 @@ const PANTS = ["#1e293b", "#4b5563", "#78350f", "#374151"];
 
 export function npcLook(name: string, role: string): Look {
   const h = hashString(name + role);
-  const look: Look = {
+  return {
     hair: HAIRS[h % HAIRS.length],
     skin: SKINS[(h >>> 3) % SKINS.length],
     shirt: SHIRTS[(h >>> 6) % SHIRTS.length],
     pants: PANTS[(h >>> 9) % PANTS.length],
-    longHair: (h >>> 12) % 3 === 0,
-    glasses: (h >>> 15) % 4 === 0,
+    hat: (h >>> 12) % 4 === 0 ? "#1e293b" : undefined,
+    tie: (h >>> 14) % 3 === 0 ? "#b91c1c" : undefined,
+    briefcase: (h >>> 16) % 2 === 0,
+    longHair: (h >>> 17) % 2 === 0,
+    glasses: (h >>> 18) % 3 === 0,
   };
-  if (/Letra|Juez|Magistr|Catedr|Interventor|Presidente|Secretari|Abogad/i.test(role)) look.tie = "#111827";
-  if (/Jef|Director|Inspector|Interventor/i.test(role)) look.briefcase = true;
-  return look;
 }
 
-export const BOSS_LOOK: Record<BossStyle, Look> = {
-  quorum: { hair: "#e5e7eb", skin: "#f1c7a5", shirt: "#1e3a8a", pants: "#111827", tie: "#fbbf24", longHair: true },
-  stamp: { hair: "#374151", skin: "#d6a27a", shirt: "#7f1d1d", pants: "#111827", tie: "#111111" },
-  judge: { hair: "#f8fafc", skin: "#e8b894", shirt: "#0f0f10", pants: "#0f0f10", longHair: true },
-  inspector: { hair: "#7c2d12", skin: "#c68642", shirt: "#166534", pants: "#3f3f46", tie: "#fde047", glasses: true },
-  cyber: { hair: "#22d3ee", skin: "#e0ac69", shirt: "#0f172a", pants: "#020617", tie: "#22d3ee" },
-  stars: { hair: "#a16207", skin: "#f1c7a5", shirt: "#1d4ed8", pants: "#1e3a8a", hat: "#1e3a8a" },
-};
+export type Kind = "papeleo" | "sello" | "silencio" | "burocrata";
 
 export const TILE = 16;
 
-export function drawSky(g: CanvasRenderingContext2D, th: Theme): void {
-  const gr = g.createLinearGradient(0, 0, 0, 180);
-  gr.addColorStop(0, th.sky[0]);
-  gr.addColorStop(1, th.sky[1]);
-  g.fillStyle = gr;
-  g.fillRect(0, 0, 320, 180);
-}
+// ==========================================
+// CACHÉ DE FONDOS PANORÁMICOS 3D PIXAR
+// ==========================================
+const BG_CACHE: Partial<Record<string, HTMLImageElement>> = {};
+const BG_MAP: Record<string, string> = {
+  plaza: "/backgrounds/plaza.jpg",
+  congreso: "/backgrounds/cortes.jpg",
+  europa: "/backgrounds/bruselas.jpg",
+  ministerio: "/backgrounds/moncloa.jpg",
+  procedimiento: "/backgrounds/justicia.jpg",
+  inap: "/backgrounds/funcion.jpg",
+  hacienda: "/backgrounds/hacienda.jpg",
+  tribunal: "/backgrounds/inap.jpg",
+};
 
-export function drawBackdrop(g: CanvasRenderingContext2D, th: Theme, camX: number): void {
-  drawSky(g, th);
-  // Skyline lejano (parallax lento)
-  const far = camX * 0.25;
-  g.fillStyle = th.far;
-  for (let i = Math.floor(far / 36) - 1; i < Math.floor(far / 36) + 12; i++) {
-    const x = i * 36 - far;
-    const h = 40 + hashString(String(i)) % 50;
-    g.fillRect(x, 150 - h, 30, 180);
+function getBackground(key: string): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  const path = BG_MAP[key] ?? "/backgrounds/plaza.jpg";
+  if (!BG_CACHE[key]) {
+    const img = new Image();
+    img.src = path;
+    BG_CACHE[key] = img;
   }
-  // Monumentos (parallax medio)
-  const mid = camX * 0.5;
-  const span = 160;
-  for (let i = Math.floor(mid / span) - 1; i < Math.floor(mid / span) + 4; i++) {
-    drawProp(g, th.prop, th, i * span - mid + 40, i);
+  const img = BG_CACHE[key];
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+// ==========================================
+// CACHÉ DE RETRATOS DE PERSONAJES 3D PIXAR
+// ==========================================
+const PORTRAIT_CACHE: Record<string, HTMLImageElement> = {};
+const PORTRAIT_PATHS: Record<string, string> = {
+  ramon: "/characters/don_ramon.jpg",
+  quorum: "/characters/senor_quorum.jpg",
+  comisario: "/characters/comisario_ue.jpg",
+  jueza: "/characters/jueza_alzada.jpg",
+  interventor: "/characters/gran_interventor.jpg",
+  tribunal: "/characters/tribunal_calificador.jpg",
+  avatar: "/player/avatar.png",
+};
+
+function getPortraitImg(key: string): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  const path = PORTRAIT_PATHS[key];
+  if (!path) return null;
+  if (!PORTRAIT_CACHE[key]) {
+    const img = new Image();
+    img.src = path;
+    PORTRAIT_CACHE[key] = img;
   }
+  const img = PORTRAIT_CACHE[key];
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
 }
 
-function drawProp(g: CanvasRenderingContext2D, prop: Prop, th: Theme, x: number, i: number): void {
-  const base = 150;
-  switch (prop) {
-    case "dome":
-      g.fillStyle = th.mid;
-      g.fillRect(x, base - 34, 80, 40);
-      g.fillStyle = th.accent;
-      g.beginPath();
-      g.arc(x + 40, base - 34, 24, Math.PI, 0);
-      g.fill();
-      g.fillStyle = "#e2e8f0";
-      for (let c = 0; c < 5; c++) g.fillRect(x + 8 + c * 15, base - 26, 4, 26);
-      break;
-    case "towers": {
-      const h = 60 + (hashString(String(i)) % 40);
-      g.fillStyle = th.mid;
-      g.fillRect(x, base - h, 30, h + 30);
-      g.fillStyle = th.accent;
-      for (let wy = 0; wy < 4; wy++) for (let wx = 0; wx < 3; wx++) g.fillRect(x + 5 + wx * 8, base - h + 6 + wy * 12, 4, 5);
-      g.fillStyle = "#ef4444";
-      g.fillRect(x + 15, base - h - 14, 1, 14);
-      g.fillRect(x + 16, base - h - 14, 8, 5);
-      break;
-    }
-    case "books":
-      for (let b = 0; b < 5; b++) {
-        g.fillStyle = ["#7f1d1d", "#1e3a8a", "#14532d", "#78350f", "#4c1d95"][b];
-        g.fillRect(x + b * 9, base - 40 - (b % 2) * 6, 8, 40 + (b % 2) * 6);
-      }
-      g.fillStyle = th.mid;
-      g.fillRect(x - 4, base, 60, 4);
-      break;
-    case "coins":
-      g.fillStyle = th.accent;
-      for (let c = 0; c < 3; c++) {
-        g.beginPath();
-        g.arc(x + 12 + c * 20, base - 20 - c * 8, 9, 0, Math.PI * 2);
-        g.fill();
-      }
-      g.fillStyle = th.mid;
-      g.fillRect(x - 4, base, 70, 30);
-      break;
-    case "circuit":
-      g.strokeStyle = th.groundTop;
-      g.lineWidth = 1;
-      g.beginPath();
-      g.moveTo(x, base - 10);
-      g.lineTo(x + 20, base - 10);
-      g.lineTo(x + 20, base - 40);
-      g.lineTo(x + 60, base - 40);
-      g.lineTo(x + 60, base - 20);
-      g.lineTo(x + 90, base - 20);
-      g.stroke();
-      g.fillStyle = th.accent;
-      g.fillRect(x + 18, base - 42, 4, 4);
-      g.fillRect(x + 58, base - 22, 4, 4);
-      break;
-    case "stars":
-      g.fillStyle = th.far;
-      g.fillRect(x, base - 60, 50, 60);
-      g.fillStyle = th.accent;
-      for (let s = 0; s < 12; s++) {
-        const a = (s / 12) * Math.PI * 2;
-        g.fillRect(x + 25 + Math.cos(a) * 14 - 1, base - 30 + Math.sin(a) * 14 - 1, 2, 2);
-      }
-      break;
-    case "fountain":
-      g.fillStyle = th.mid;
-      g.fillRect(x, base - 10, 70, 10);
-      g.fillStyle = "#bae6fd";
-      g.fillRect(x + 30, base - 40, 10, 30);
-      g.fillRect(x + 22, base - 30, 26, 4);
-      break;
-    case "scales":
-      g.fillStyle = th.mid;
-      g.fillRect(x + 20, base - 60, 4, 60);
-      g.fillStyle = th.accent;
-      g.fillRect(x + 4, base - 60, 36, 3);
-      g.fillRect(x + 2, base - 46, 8, 2);
-      g.fillRect(x + 30, base - 46, 8, 2);
-      break;
-  }
+export function getNpcPortraitKey(name: string, role: string): string {
+  const s = (name + " " + role).toLowerCase();
+  if (s.includes("ramón") || s.includes("ramon") || s.includes("conserje")) return "ramon";
+  if (s.includes("quórum") || s.includes("quorum") || s.includes("congreso") || s.includes("diputad")) return "quorum";
+  if (s.includes("bruselas") || s.includes("comisario") || s.includes("unión") || s.includes("europea")) return "comisario";
+  if (s.includes("juez") || s.includes("alzada") || s.includes("magistrad") || s.includes("justicia")) return "jueza";
+  if (s.includes("interventor") || s.includes("hacienda") || s.includes("tribut") || s.includes("inspector")) return "interventor";
+  if (s.includes("tribunal") || s.includes("calificador") || s.includes("presidenta")) return "tribunal";
+  // Alternativas temáticas para los demás preparadores
+  const h = hashString(name);
+  const pool = ["ramon", "jueza", "comisario", "quorum", "interventor"];
+  return pool[h % pool.length];
 }
 
-export function drawTile(
-  g: CanvasRenderingContext2D,
-  c: string,
-  x: number,
-  y: number,
-  th: Theme,
-  t: number,
-  aboveSolid: boolean,
-): void {
-  switch (c) {
-    case "#":
-      g.fillStyle = th.ground;
-      g.fillRect(x, y, TILE, TILE);
-      g.fillStyle = "rgba(0,0,0,0.18)";
-      g.fillRect(x, y + 8, TILE, 1);
-      g.fillRect(x + ((y / TILE) % 2 ? 4 : 10), y + 8, 1, 8);
-      if (!aboveSolid) {
-        g.fillStyle = th.groundTop;
-        g.fillRect(x, y, TILE, 3);
-      }
-      break;
-    case "B":
-      g.fillStyle = th.brick;
-      g.fillRect(x, y, TILE, TILE);
-      g.fillStyle = "rgba(0,0,0,0.35)";
-      g.fillRect(x, y + 7, TILE, 1);
-      g.fillRect(x + 7, y, 1, 7);
-      g.fillRect(x + 3, y + 8, 1, 8);
-      break;
-    case "Q":
-      g.fillStyle = th.accent;
-      g.fillRect(x, y, TILE, TILE);
-      g.fillStyle = "#7c2d12";
-      g.fillRect(x, y, TILE, 1);
-      g.fillRect(x, y + TILE - 1, TILE, 1);
-      g.fillRect(x, y, 1, TILE);
-      g.fillRect(x + TILE - 1, y, 1, TILE);
-      g.font = "bold 11px monospace";
-      g.textAlign = "center";
-      g.fillStyle = "#7c2d12";
-      g.fillText("?", x + 8, y + 12);
-      break;
-    case "X":
-      g.fillStyle = "#6b6b6b";
-      g.fillRect(x, y, TILE, TILE);
-      g.fillStyle = "#4b4b4b";
-      g.fillRect(x + 2, y + 2, 2, 2);
-      g.fillRect(x + 12, y + 12, 2, 2);
-      break;
-    case "=":
-      g.fillStyle = "#a16207";
-      g.fillRect(x, y, TILE, 5);
-      g.fillStyle = "#fde68a";
-      g.fillRect(x, y, TILE, 1);
-      g.fillStyle = "#713f12";
-      g.fillRect(x, y + 5, TILE, 1);
-      break;
-    case "R":
-      g.fillStyle = "#94a3b8";
-      g.fillRect(x + 1, y + 2, TILE - 2, TILE - 3);
-      g.fillStyle = "#64748b";
-      g.fillRect(x + 4, y + 6, 1, 4);
-      g.fillRect(x + 10, y + 4, 1, 5);
-      g.fillStyle = "#cbd5e1";
-      g.fillRect(x + 2, y + 3, 4, 1);
-      break;
-    case "c": {
-      const w = 3 + 4 * Math.abs(Math.cos(t / 14));
-      g.fillStyle = "#a16207";
-      g.fillRect(x + 8 - w / 2 - 0.5, y + 3, w + 1, 10);
-      g.fillStyle = "#facc15";
-      g.fillRect(x + 8 - w / 2, y + 4, w, 8);
-      break;
-    }
-  }
-}
-
-export function drawGate(g: CanvasRenderingContext2D, x: number, groundY: number): void {
-  g.fillStyle = "#7c2d12";
-  g.fillRect(x, groundY - 48, 4, 48);
-  g.fillRect(x + 52, groundY - 48, 4, 48);
-  g.fillStyle = "#b45309";
-  g.fillRect(x - 4, groundY - 56, 64, 12);
-  g.fillStyle = "#fef08a";
-  g.font = "bold 8px monospace";
-  g.textAlign = "center";
-  g.fillText("PRUEBA", x + 28, groundY - 47);
-}
-
-export function drawGoal(g: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
-  g.fillStyle = "#e5e7eb";
-  g.fillRect(x, groundY - 56, 2, 56);
-  const wave = Math.sin(t / 8) * 2;
-  g.fillStyle = "#facc15";
-  g.beginPath();
-  g.moveTo(x + 2, groundY - 56);
-  g.lineTo(x + 22, groundY - 50 + wave);
-  g.lineTo(x + 2, groundY - 44);
-  g.fill();
-}
-
-// Caché de imágenes de la jugadora (Lucía)
+// ==========================================
+// CACHÉ DE SPRITES DE LA JUGADORA (LUCÍA)
+// ==========================================
 const SPRITE_CACHE: Partial<Record<"walk" | "idle" | "cheer", HTMLImageElement>> = {};
 
 function getSprite(key: "walk" | "idle" | "cheer"): HTMLImageElement | null {
@@ -289,6 +121,285 @@ function getSprite(key: "walk" | "idle" | "cheer"): HTMLImageElement | null {
   return img && img.complete && img.naturalWidth > 0 ? img : null;
 }
 
+// ==========================================
+// DIBUJO DE FONDOS TEMÁTICOS REALISTAS
+// ==========================================
+export function drawSky(g: CanvasRenderingContext2D, th: Theme): void {
+  const gr = g.createLinearGradient(0, 0, 0, 180);
+  gr.addColorStop(0, th.sky[0]);
+  gr.addColorStop(1, th.sky[1]);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 320, 180);
+}
+
+export function drawBackdrop(g: CanvasRenderingContext2D, th: Theme, camX: number): void {
+  const bg = getBackground(th.key);
+  if (bg) {
+    // Parallax panorámico suave con la imagen 3D generada
+    const drawH = 180;
+    const imgRatio = bg.naturalWidth / bg.naturalHeight;
+    const drawW = drawH * imgRatio;
+    const speed = 0.12;
+    const offset = -(camX * speed) % drawW;
+
+    g.drawImage(bg, offset, 0, drawW, drawH);
+    if (offset + drawW < 320) {
+      g.drawImage(bg, offset + drawW, 0, drawW, drawH);
+    }
+
+    // Degradado sutil en la parte inferior para dar profundidad y contraste a las plataformas
+    const groundShadow = g.createLinearGradient(0, 130, 0, 180);
+    groundShadow.addColorStop(0, "rgba(0,0,0,0)");
+    groundShadow.addColorStop(1, "rgba(0,0,0,0.4)");
+    g.fillStyle = groundShadow;
+    g.fillRect(0, 130, 320, 50);
+  } else {
+    // Fallback decorativo con cielo y siluetas
+    drawSky(g, th);
+    const far = camX * 0.25;
+    g.fillStyle = th.far;
+    for (let i = Math.floor(far / 40) - 1; i < Math.floor(far / 40) + 12; i++) {
+      const x = i * 40 - far;
+      const h = 50 + (hashString(String(i)) % 55);
+      g.fillRect(x, 150 - h, 34, 180);
+    }
+  }
+}
+
+// ==========================================
+// DIBUJO DE BALDOSAS Y ELEMENTOS 3D
+// ==========================================
+export function drawTile(
+  g: CanvasRenderingContext2D,
+  c: string,
+  x: number,
+  y: number,
+  th: Theme,
+  t: number,
+  aboveSolid: boolean,
+): void {
+  switch (c) {
+    case "#": {
+      // Suelo ministerial: losas de granito con biseles de luz y sombra
+      g.fillStyle = th.ground;
+      g.fillRect(x, y, TILE, TILE);
+
+      // Bisel de luz superior / lateral
+      g.fillStyle = "rgba(255,255,255,0.22)";
+      g.fillRect(x, y, TILE, 1);
+      g.fillRect(x, y, 1, TILE);
+
+      // Bisel de sombra
+      g.fillStyle = "rgba(0,0,0,0.3)";
+      g.fillRect(x, y + TILE - 1, TILE, 1);
+      g.fillRect(x + TILE - 1, y, 1, TILE);
+
+      // Líneas sutiles de baldosas
+      g.fillStyle = "rgba(0,0,0,0.15)";
+      g.fillRect(x, y + 8, TILE, 1);
+      g.fillRect(x + ((y / TILE) % 2 ? 4 : 12), y + 8, 1, 8);
+
+      // Hierba cuidada institucional en la superficie exterior
+      if (!aboveSolid) {
+        g.fillStyle = th.groundTop;
+        g.fillRect(x, y, TILE, 3);
+        // Pequeñas briznas de hierba para acabado orgánico
+        g.fillStyle = "#84cc16";
+        for (let i = 2; i < TILE; i += 4) {
+          g.fillRect(x + i, y - 1, 2, 2);
+        }
+      }
+      break;
+    }
+
+    case "B": {
+      // Bloques de piedra arquitectónica / mármol
+      g.fillStyle = th.brick;
+      g.fillRect(x, y, TILE, TILE);
+
+      // Relieve 3D biselado
+      g.fillStyle = "rgba(255,255,255,0.3)";
+      g.fillRect(x, y, TILE, 1);
+      g.fillRect(x, y, 1, TILE);
+      g.fillStyle = "rgba(0,0,0,0.4)";
+      g.fillRect(x, y + TILE - 1, TILE, 1);
+      g.fillRect(x + TILE - 1, y, 1, TILE);
+
+      // Junta de cantería
+      g.fillStyle = "rgba(0,0,0,0.25)";
+      g.fillRect(x, y + 7, TILE, 1);
+      g.fillRect(x + 8, y, 1, 7);
+      break;
+    }
+
+    case "Q": {
+      // Bloque '?' estilo cubo de latón dorado 3D con remaches y brillo
+      const pulse = Math.sin(t / 8) * 0.15 + 0.85;
+
+      // Cara base dorada metálica
+      const grad = g.createLinearGradient(x, y, x + TILE, y + TILE);
+      grad.addColorStop(0, "#fef08a");
+      grad.addColorStop(0.5, "#f59e0b");
+      grad.addColorStop(1, "#b45309");
+      g.fillStyle = grad;
+      g.fillRect(x, y, TILE, TILE);
+
+      // Bisel de luz superior e izquierdo
+      g.fillStyle = "rgba(255,255,255,0.6)";
+      g.fillRect(x, y, TILE, 2);
+      g.fillRect(x, y, 2, TILE);
+
+      // Bisel de sombra inferior y derecho
+      g.fillStyle = "rgba(120,53,15,0.8)";
+      g.fillRect(x, y + TILE - 2, TILE, 2);
+      g.fillRect(x + TILE - 2, y, 2, TILE);
+
+      // 4 remaches en las esquinas
+      g.fillStyle = "#78350f";
+      g.fillRect(x + 2, y + 2, 2, 2);
+      g.fillRect(x + TILE - 4, y + 2, 2, 2);
+      g.fillRect(x + 2, y + TILE - 4, 2, 2);
+      g.fillRect(x + TILE - 4, y + TILE - 4, 2, 2);
+
+      // Símbolo '?' grabado en 3D con halo
+      g.save();
+      g.shadowColor = `rgba(253, 224, 71, ${pulse})`;
+      g.shadowBlur = 6;
+      g.font = "bold 12px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillStyle = "#78350f";
+      g.fillText("?", x + TILE / 2 + 0.5, y + TILE / 2 + 1);
+      g.fillStyle = "#fef08a";
+      g.fillText("?", x + TILE / 2, y + TILE / 2);
+      g.restore();
+      break;
+    }
+
+    case "X": {
+      // Bloque metálico inerte tras responder
+      g.fillStyle = "#4b5563";
+      g.fillRect(x, y, TILE, TILE);
+      g.fillStyle = "rgba(255,255,255,0.2)";
+      g.fillRect(x, y, TILE, 1);
+      g.fillRect(x, y, 1, TILE);
+      g.fillStyle = "rgba(0,0,0,0.5)";
+      g.fillRect(x, y + TILE - 1, TILE, 1);
+      g.fillRect(x + TILE - 1, y, 1, TILE);
+      g.fillStyle = "#1f2937";
+      g.fillRect(x + 4, y + 4, 2, 2);
+      g.fillRect(x + TILE - 6, y + 4, 2, 2);
+      g.fillRect(x + 4, y + TILE - 6, 2, 2);
+      g.fillRect(x + TILE - 6, y + TILE - 6, 2, 2);
+      break;
+    }
+
+    case "=": {
+      // Plataforma flotante de caoba con herrajes dorados
+      g.fillStyle = "#78350f";
+      g.fillRect(x, y, TILE, 6);
+      g.fillStyle = "#facc15";
+      g.fillRect(x, y, TILE, 1.5);
+      g.fillStyle = "rgba(0,0,0,0.4)";
+      g.fillRect(x, y + 5, TILE, 1.5);
+      break;
+    }
+
+    case "R": {
+      // Roca de granito tallada
+      g.fillStyle = "#64748b";
+      g.beginPath();
+      g.roundRect(x + 1, y + 1, TILE - 2, TILE - 2, 3);
+      g.fill();
+      g.fillStyle = "#94a3b8";
+      g.fillRect(x + 3, y + 2, 4, 2);
+      g.fillStyle = "#334155";
+      g.fillRect(x + 4, y + 8, 8, 1);
+      break;
+    }
+
+    case "c": {
+      // MONEDA DE EURO 3D DORADA CON SÍMBOLO '€' Y GIRO PERSPECTIVO
+      const floatY = Math.sin(t / 6) * 1.5;
+      const rot = Math.abs(Math.cos(t / 10));
+      const w = Math.max(2, 10 * rot);
+      const cx = x + TILE / 2;
+      const cy = y + TILE / 2 + floatY;
+
+      g.save();
+      // Sombra sutil de la moneda
+      g.fillStyle = "rgba(0,0,0,0.2)";
+      g.beginPath();
+      g.ellipse(cx, y + TILE - 1, 5 * rot, 1.5, 0, 0, Math.PI * 2);
+      g.fill();
+
+      // Borde exterior metálico
+      g.fillStyle = "#b45309";
+      g.beginPath();
+      g.ellipse(cx, cy, w / 2, 5.5, 0, 0, Math.PI * 2);
+      g.fill();
+
+      // Cara interna dorada reflectante
+      const coinGrad = g.createRadialGradient(cx - w / 4, cy - 2, 1, cx, cy, 5.5);
+      coinGrad.addColorStop(0, "#fef08a");
+      coinGrad.addColorStop(0.7, "#facc15");
+      coinGrad.addColorStop(1, "#eab308");
+      g.fillStyle = coinGrad;
+      g.beginPath();
+      g.ellipse(cx, cy, (w - 1.5) / 2, 4.5, 0, 0, Math.PI * 2);
+      g.fill();
+
+      // Símbolo '€' en la cara cuando está visible
+      if (rot > 0.45) {
+        g.font = `bold ${Math.round(8 * rot)}px sans-serif`;
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillStyle = "#78350f";
+        g.fillText("€", cx, cy + 0.5);
+      }
+      g.restore();
+      break;
+    }
+  }
+}
+
+// Puerta de examen / final de tema
+export function drawGate(g: CanvasRenderingContext2D, x: number, groundY: number): void {
+  // Columnas neoclásicas
+  g.fillStyle = "#cbd5e1";
+  g.fillRect(x, groundY - 52, 6, 52);
+  g.fillRect(x + 50, groundY - 52, 6, 52);
+
+  // Cornisa superior dorada
+  g.fillStyle = "#b45309";
+  g.fillRect(x - 4, groundY - 60, 64, 10);
+  g.fillStyle = "#fde047";
+  g.fillRect(x - 4, groundY - 60, 64, 2);
+
+  g.font = "bold 8px sans-serif";
+  g.textAlign = "center";
+  g.fillStyle = "#ffffff";
+  g.fillText("🏛️ PRUEBA", x + 28, groundY - 52);
+}
+
+// Meta del tutorial (Plaza)
+export function drawGoal(g: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
+  g.fillStyle = "#94a3b8";
+  g.fillRect(x, groundY - 56, 3, 56);
+  const wave = Math.sin(t / 8) * 3;
+  g.fillStyle = "#ef4444";
+  g.beginPath();
+  g.moveTo(x + 3, groundY - 56);
+  g.lineTo(x + 24, groundY - 48 + wave);
+  g.lineTo(x + 3, groundY - 40);
+  g.fill();
+  g.fillStyle = "#facc15";
+  g.fillRect(x + 3, groundY - 50 + wave * 0.5, 14, 4);
+}
+
+// ==========================================
+// DIBUJO DE LA JUGADORA (LUCÍA) EN ALTA DEFINICIÓN
+// ==========================================
 export function drawPlayer(
   g: CanvasRenderingContext2D,
   x: number,
@@ -314,149 +425,132 @@ export function drawPlayer(
   }
 
   const sprite = getSprite(spriteName);
-  if (!sprite) {
-    drawPerson(g, x, y, PLAYER_LOOK, { flip, frame: Math.floor(t / 8) % 2, hurt: o.hurt });
-    return;
-  }
 
   g.save();
+
+  // Sombra suave en el suelo bajo los pies de Lucía
+  g.fillStyle = "rgba(0,0,0,0.3)";
+  g.beginPath();
+  g.ellipse(x, y - 0.5, 7, 2, 0, 0, Math.PI * 2);
+  g.fill();
+
   if (o.hurt && t % 4 < 2) {
     g.globalAlpha = 0.35;
   }
 
-  // Altura del sprite adaptada a la escala de 16px por bloque
-  const targetH = spriteName === "idle" ? 22 : 24;
-  const ratio = sprite.naturalWidth / sprite.naturalHeight;
-  const targetW = Math.round(targetH * ratio);
+  // Altura mejorada y nítida
+  const targetH = spriteName === "idle" ? 26 : 28;
 
-  // Efecto de balanceo al caminar
-  const bob = state === "walk" ? Math.abs(Math.sin(t / 3.5)) * 1.5 : 0;
-  const drawY = y - targetH - bob;
+  if (sprite) {
+    const ratio = sprite.naturalWidth / sprite.naturalHeight;
+    const targetW = Math.round(targetH * ratio);
+    const bob = state === "walk" ? Math.abs(Math.sin(t / 3.5)) * 1.8 : 0;
+    const drawY = y - targetH - bob;
 
-  if (flip) {
-    g.translate(x, drawY);
-    g.scale(-1, 1);
-    g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+    if (flip) {
+      g.translate(x, drawY);
+      g.scale(-1, 1);
+      g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+    } else {
+      g.translate(x, drawY);
+      g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+    }
   } else {
-    g.translate(x, drawY);
-    g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+    // Fallback estilizado si la imagen no está lista
+    g.fillStyle = "#f472b6";
+    g.fillRect(x - 5, y - 24, 10, 24);
   }
   g.restore();
 }
 
-// Dibuja una persona pixel-art con los pies en (x, y). Se usa para jugador (fallback), NPC, burócratas y jefes.
-export function drawPerson(
+// ==========================================
+// DIBUJO DE NPCS CON RETRATOS 3D PIXAR REALISTAS
+// ==========================================
+export function drawNPC(
   g: CanvasRenderingContext2D,
   x: number,
   y: number,
-  look: Look,
-  o: { flip?: boolean; frame?: number; arm?: boolean; hurt?: boolean } = {},
+  name: string,
+  role: string,
+  t: number,
 ): void {
+  const portraitKey = getNpcPortraitKey(name, role);
+  const portraitImg = getPortraitImg(portraitKey);
+  const hover = Math.sin(t / 14) * 1.5;
+  const radius = 13;
+  const centerY = y - 18 + hover;
 
-  const f = o.flip ? -1 : 1;
-  const fr = o.frame ?? 0;
-  const rect = (dx: number, dy: number, w: number, h: number, color: string) => {
-    g.fillStyle = color;
-    const rx = f > 0 ? dx : -dx - w;
-    g.fillRect(x + rx, y + dy, w, h);
-  };
-  const legShift = fr === 1 ? 1 : 0;
-  rect(-3 + legShift, -5, 3, 5, look.pants);
-  rect(0 - legShift, -5, 3, 5, look.pants);
-  rect(-3 + legShift, -1, 3, 1, "#111827");
-  rect(0 - legShift, -1, 3, 1, "#111827");
-  rect(-4, -11, 8, 6, look.shirt);
-  if (look.tie) rect(-1, -11, 2, 5, look.tie);
-  const sw = fr === 1 ? 1 : -1;
-  rect(-6, -10 + sw, 2, 5, look.shirt);
-  if (o.arm) {
-    rect(4, -12, 6, 2, look.shirt);
-    rect(9, -13, 2, 3, look.skin);
-  } else {
-    rect(4, -10 - sw, 2, 5, look.shirt);
-  }
-  if (look.briefcase) rect(6, -6, 4, 4, "#78350f");
-  rect(-3, -17, 6, 6, look.skin);
-  rect(-3, -18, 6, 2, look.hair);
-  rect(-3, -17, 1, 4, look.hair);
-  rect(2, -17, 1, 4, look.hair);
-  if (look.longHair) {
-    rect(-4, -16, 1, 8, look.hair);
-    rect(3, -16, 1, 8, look.hair);
-  }
-  if (o.hurt) {
-    rect(-2, -14, 1, 1, "#111111");
-    rect(1, -14, 1, 1, "#111111");
-  } else {
-    rect(-1, -14, 1, 1, "#111111");
-    rect(1, -14, 1, 1, "#111111");
-  }
-  if (look.glasses) {
-    rect(-2, -14, 4, 1, "#334155");
-  }
-  if (look.hat) {
-    rect(-5, -19, 10, 2, look.hat);
-    rect(-3, -21, 6, 2, look.hat);
-  }
-}
+  g.save();
 
-export function drawEnemy(
-  g: CanvasRenderingContext2D,
-  kind: Kind,
-  x: number,
-  y: number,
-  dir: number,
-  frame: number,
-): void {
-  if (kind === "burocrata") {
-    drawPerson(g, x, y, BUROCRATA_LOOK, { flip: dir < 0, frame });
-    return;
-  }
-  if (kind === "papeleo") {
-    g.fillStyle = "#ffffff";
-    g.fillRect(x - 5, y - 11, 10, 11);
-    g.fillStyle = "#cbd5e1";
-    g.fillRect(x - 5, y - 1, 10, 1);
-    g.fillRect(x + 2, y - 11, 3, 3);
-    g.fillStyle = "#94a3b8";
-    g.fillRect(x - 3, y - 7, 6, 1);
-    g.fillRect(x - 3, y - 4, 4, 1);
-    g.fillStyle = "#111827";
-    g.fillRect(x - 3, y - 9, 2, 1);
-    g.fillRect(x + 1, y - 9, 2, 1);
-    g.fillRect(x - 2, y - 8, 1, 1);
-    g.fillRect(x + 2, y - 8, 1, 1);
-    g.fillStyle = "#b91c1c";
-    g.fillRect(x - 1, y - 6, 3, 1);
-    g.fillStyle = "#111827";
-    g.fillRect(x - 3 + (frame ? 0 : 1), y, 2, 2);
-    g.fillRect(x + 1 - (frame ? 0 : 1), y, 2, 2);
-    return;
-  }
-  if (kind === "sello") {
-    g.fillStyle = "#7f1d1d";
-    g.fillRect(x - 3, y - 11, 6, 4);
-    g.fillStyle = "#dc2626";
-    g.fillRect(x - 6, y - 7, 12, 6);
-    g.fillStyle = "#fca5a5";
-    g.fillRect(x - 4, y - 5, 8, 1);
-    g.fillStyle = "#7f1d1d";
-    g.fillRect(x - 6, y - 1, 12, 1);
-    return;
-  }
-  // silencio (fantasma)
-  g.fillStyle = "rgba(226,232,240,0.92)";
+  // Sombra en el suelo
+  g.fillStyle = "rgba(0,0,0,0.35)";
   g.beginPath();
-  g.arc(x, y - 10, 6, Math.PI, 0);
-  g.fillRect(x - 6, y - 10, 12, 8);
-  g.fillStyle = "rgba(226,232,240,0.92)";
-  for (let i = 0; i < 3; i++) g.fillRect(x - 6 + i * 4, y - 2 + ((i + frame) % 2), 4, 2);
-  g.fillStyle = "#334155";
-  g.fillRect(x - 3, y - 8, 2, 1);
-  g.fillRect(x + 1, y - 8, 2, 1);
-  g.fillRect(x - 1, y - 5, 2, 1);
+  g.ellipse(x, y - 1, 10, 2.5, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // Pedestal ministerial de mármol y oro bajo el medallón
+  g.fillStyle = "#cbd5e1";
+  g.fillRect(x - 5, y - 6, 10, 5);
+  g.fillStyle = "#f59e0b";
+  g.fillRect(x - 7, y - 2, 14, 2);
+
+  // Halo brillante exterior
+  g.shadowColor = "rgba(250, 204, 21, 0.75)";
+  g.shadowBlur = 8;
+  g.fillStyle = "#f59e0b";
+  g.beginPath();
+  g.arc(x, centerY, radius + 2, 0, Math.PI * 2);
+  g.fill();
+
+  // Borde dorado metálico
+  g.shadowBlur = 0;
+  g.fillStyle = "#b45309";
+  g.beginPath();
+  g.arc(x, centerY, radius + 1, 0, Math.PI * 2);
+  g.fill();
+
+  // Retrato 3D Pixar recortado en círculo
+  g.save();
+  g.beginPath();
+  g.arc(x, centerY, radius, 0, Math.PI * 2);
+  g.clip();
+
+  if (portraitImg) {
+    g.drawImage(portraitImg, x - radius, centerY - radius, radius * 2, radius * 2);
+  } else {
+    // Fondo de color con inicial si la imagen aún carga
+    g.fillStyle = "#1e3a8a";
+    g.fillRect(x - radius, centerY - radius, radius * 2, radius * 2);
+    g.fillStyle = "#ffffff";
+    g.font = "bold 12px sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(name.charAt(0), x, centerY);
+  }
+  g.restore();
+
+  // Etiqueta flotante superior "💬 [HABLAR]"
+  const promptY = centerY - radius - 5;
+  g.fillStyle = "rgba(15, 23, 42, 0.85)";
+  g.beginPath();
+  g.roundRect(x - 22, promptY - 8, 44, 11, 4);
+  g.fill();
+  g.strokeStyle = "#facc15";
+  g.lineWidth = 0.8;
+  g.stroke();
+
+  g.font = "bold 6.5px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillStyle = "#facc15";
+  g.fillText("💬 HABLAR", x, promptY - 2.5);
+
+  g.restore();
 }
 
+// ==========================================
+// DIBUJO DE JEFES CON RETRATO 3D Y AURA DE PODER
+// ==========================================
 export function drawBoss(
   g: CanvasRenderingContext2D,
   style: BossStyle,
@@ -466,76 +560,191 @@ export function drawBoss(
   t: number,
   flash: number,
 ): void {
-  const look = BOSS_LOOK[style];
+  let portraitKey = "quorum";
+  let auraColor = "rgba(250, 204, 21, 0.8)";
+  let bossTitle = "Señor Quórum";
+
+  if (style === "judge") {
+    portraitKey = "jueza";
+    auraColor = "rgba(248, 113, 113, 0.85)";
+    bossTitle = "Jueza de Alzada";
+  } else if (style === "inspector") {
+    portraitKey = "interventor";
+    auraColor = "rgba(52, 211, 153, 0.85)";
+    bossTitle = "Gran Interventor";
+  } else if (style === "cyber" || style === "stars") {
+    portraitKey = "comisario";
+    auraColor = "rgba(56, 189, 248, 0.85)";
+    bossTitle = "Comisario UE";
+  } else if (style === "stamp") {
+    portraitKey = "tribunal";
+    auraColor = "rgba(192, 132, 252, 0.9)";
+    bossTitle = "Tribunal Calificador";
+  }
+
+  const portraitImg = getPortraitImg(portraitKey);
+  const hover = Math.sin(t / 12) * 3;
+  const radius = 22;
+  const centerY = y - 28 + hover;
+
   g.save();
-  g.translate(x, y + Math.sin(t / 25) * 1);
-  g.scale(3, 3);
-  drawPerson(g, 0, 0, look, { flip, frame: Math.floor(t / 20) % 2, arm: true });
-  switch (style) {
-    case "quorum":
-      g.fillStyle = "#fbbf24";
-      g.fillRect(6, -10, 3, 2);
-      g.fillRect(7, -8, 1, 3);
-      break;
-    case "stamp":
-      g.fillStyle = "#b91c1c";
-      g.fillRect(-6, -30, 12, 5);
-      g.fillStyle = "#7f1d1d";
-      g.fillRect(-2, -34, 4, 4);
-      break;
-    case "judge":
-      g.fillStyle = "#92400e";
-      g.fillRect(6, -14, 4, 2);
-      g.fillRect(9, -14, 1, 6);
-      g.fillStyle = "#f8fafc";
-      g.fillRect(-5, -10, 2, 3);
-      g.fillRect(3, -10, 2, 3);
-      break;
-    case "inspector":
-      g.fillStyle = "#78350f";
-      g.fillRect(-5, -20, 10, 2);
-      g.fillRect(-3, -22, 6, 2);
-      g.strokeStyle = "#93c5fd";
-      g.lineWidth = 0.6;
-      g.beginPath();
-      g.arc(9, -11, 2.2, 0, Math.PI * 2);
-      g.stroke();
-      g.fillStyle = "#78350f";
-      g.fillRect(9, -9, 1, 3);
-      break;
-    case "cyber":
-      g.fillStyle = "#0f172a";
-      g.fillRect(-7, -30, 14, 9);
-      g.strokeStyle = "#22d3ee";
-      g.lineWidth = 0.5;
-      g.strokeRect(-7, -30, 14, 9);
-      g.fillStyle = "#22d3ee";
-      g.fillRect(-5, -28, 8, 1);
-      g.fillRect(-5, -25, 5 + (Math.floor(t / 15) % 4), 1);
-      g.fillStyle = "#fde047";
-      g.fillRect(-5, -19, 10, 1);
-      g.fillRect(-5, -20, 10, 1);
-      break;
-    case "stars":
-      g.fillStyle = "#fde047";
-      for (let s = 0; s < 12; s++) {
-        const a = (s / 12) * Math.PI * 2 + t / 60;
-        g.fillRect(Math.cos(a) * 2.5 - 0.5, -8 + Math.sin(a) * 2.5 - 0.5, 1, 1);
-      }
-      break;
+
+  // Sombra amenazante en el suelo
+  g.fillStyle = "rgba(0,0,0,0.45)";
+  g.beginPath();
+  g.ellipse(x, y - 1, 18, 4.5, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // Aura pulsante de energía del jefe
+  const pulse = Math.sin(t / 6) * 4;
+  g.shadowColor = auraColor;
+  g.shadowBlur = 14 + pulse;
+  g.fillStyle = auraColor;
+  g.beginPath();
+  g.arc(x, centerY, radius + 3, 0, Math.PI * 2);
+  g.fill();
+
+  // Borde dorado ornamentado
+  g.shadowBlur = 0;
+  g.fillStyle = "#b45309";
+  g.beginPath();
+  g.arc(x, centerY, radius + 2, 0, Math.PI * 2);
+  g.fill();
+
+  // Retrato 3D Pixar circular
+  g.save();
+  g.beginPath();
+  g.arc(x, centerY, radius, 0, Math.PI * 2);
+  g.clip();
+
+  if (portraitImg) {
+    g.drawImage(portraitImg, x - radius, centerY - radius, radius * 2, radius * 2);
+  } else {
+    g.fillStyle = "#1e1b4b";
+    g.fillRect(x - radius, centerY - radius, radius * 2, radius * 2);
+    g.fillStyle = "#ffffff";
+    g.font = "bold 16px sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("JEFE", x, centerY);
   }
   g.restore();
+
+  // Destello blanco al recibir daño
   if (flash > 0) {
-    g.globalAlpha = 0.55;
-    g.fillStyle = "#ffffff";
-    g.fillRect(x - 18, y - 52, 36, 54);
-    g.globalAlpha = 1;
+    g.fillStyle = "rgba(255, 255, 255, 0.75)";
+    g.beginPath();
+    g.arc(x, centerY, radius + 2, 0, Math.PI * 2);
+    g.fill();
   }
+
+  // Cartel con nombre del Jefe
+  const badgeY = centerY - radius - 7;
+  g.fillStyle = "rgba(15, 23, 42, 0.9)";
+  g.beginPath();
+  g.roundRect(x - 30, badgeY - 8, 60, 12, 4);
+  g.fill();
+  g.strokeStyle = "#f87171";
+  g.lineWidth = 1;
+  g.stroke();
+
+  g.font = "bold 7px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillStyle = "#fca5a5";
+  g.fillText(`👹 ${bossTitle}`, x, badgeY - 2);
+
+  g.restore();
 }
 
+// ==========================================
+// DIBUJO DE ENEMIGOS BUROCRÁTICOS 3D
+// ==========================================
+export function drawEnemy(
+  g: CanvasRenderingContext2D,
+  kind: Kind,
+  x: number,
+  y: number,
+  dir: number,
+  frame: number,
+): void {
+  g.save();
+
+  // Sombra
+  g.fillStyle = "rgba(0,0,0,0.25)";
+  g.beginPath();
+  g.ellipse(x, y - 0.5, 6, 2, 0, 0, Math.PI * 2);
+  g.fill();
+
+  if (kind === "papeleo") {
+    // Carpeta de expediente administrativo con sello rojo
+    g.fillStyle = "#f8fafc";
+    g.beginPath();
+    g.roundRect(x - 6, y - 12, 12, 11, 2);
+    g.fill();
+    g.strokeStyle = "#94a3b8";
+    g.lineWidth = 0.8;
+    g.stroke();
+
+    // Cinta y sello oficial rojo
+    g.fillStyle = "#ef4444";
+    g.fillRect(x - 6, y - 7, 12, 2);
+    g.beginPath();
+    g.arc(x + 2, y - 6, 3, 0, Math.PI * 2);
+    g.fill();
+
+    // Ojitos caricatura
+    g.fillStyle = "#0f172a";
+    g.fillRect(x - 3, y - 10, 2, 2);
+    g.fillRect(x + 2, y - 10, 2, 2);
+  } else if (kind === "sello") {
+    // Sello ministerial de madera con mango de latón
+    g.fillStyle = "#f59e0b";
+    g.fillRect(x - 2, y - 13, 4, 4); // Pomo latón
+    g.fillStyle = "#78350f";
+    g.fillRect(x - 4, y - 9, 8, 4); // Mango madera
+    g.fillStyle = "#dc2626";
+    g.beginPath();
+    g.roundRect(x - 7, y - 5, 14, 5, 1); // Base caucho
+    g.fill();
+  } else if (kind === "burocrata") {
+    // Maletín ejecutivo de piel con herrajes dorados
+    g.fillStyle = "#451a03";
+    g.beginPath();
+    g.roundRect(x - 7, y - 11, 14, 10, 2);
+    g.fill();
+    g.fillStyle = "#facc15";
+    g.fillRect(x - 1.5, y - 9, 3, 3); // Cerradura oro
+    g.fillStyle = "#ffffff";
+    g.fillRect(x + 2, y - 13, 4, 3); // Papeles asomando
+  } else {
+    // Silencio administrativo (fantasma flotante)
+    g.fillStyle = "rgba(224, 242, 254, 0.85)";
+    g.beginPath();
+    g.arc(x, y - 9, 6, Math.PI, 0);
+    g.lineTo(x + 6, y - 2);
+    g.lineTo(x - 6, y - 2);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#0369a1";
+    g.fillRect(x - 3, y - 8, 2, 2);
+    g.fillRect(x + 1, y - 8, 2, 2);
+  }
+
+  g.restore();
+}
+
+// Proyectiles (sellos DENEGADO / papel)
 export function drawProjectile(g: CanvasRenderingContext2D, x: number, y: number, t: number): void {
+  g.save();
+  g.fillStyle = "#ef4444";
+  g.beginPath();
+  g.roundRect(x - 4, y - 3, 8, 6, 2);
+  g.fill();
+  g.font = "bold 4.5px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
   g.fillStyle = "#ffffff";
-  g.fillRect(x - 3, y - 2 + Math.sin(t / 4), 6, 4);
-  g.fillStyle = "#94a3b8";
-  g.fillRect(x - 2, y, 4, 1);
+  g.fillText("LEY", x, y);
+  g.restore();
 }

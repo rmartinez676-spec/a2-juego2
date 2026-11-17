@@ -6,6 +6,9 @@ import type { BossStyle, MusicCfg, Theme } from "./themes";
 
 export const VIEW_W = 320;
 export const VIEW_H = 180;
+export const RENDER_SCALE = 3;
+export const CANVAS_W = 960;
+export const CANVAS_H = 540;
 const CAM_Y = 12;
 const TILE = 16;
 const PW = 10;
@@ -222,7 +225,8 @@ export class GameEngine {
   constructor(canvas: HTMLCanvasElement, cfg: EngineConfig, onChange: (s: Snapshot) => void) {
     const g = canvas.getContext("2d");
     if (!g) throw new Error("Canvas 2D no disponible");
-    g.imageSmoothingEnabled = false;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
     this.ctx = g;
     this.cfg = cfg;
     this.difficulty = cfg.difficulty ?? "normal";
@@ -918,6 +922,12 @@ export class GameEngine {
     const th = this.cfg.theme;
     const maxCam = Math.max(0, this.W * TILE - VIEW_W);
     this.camX = Math.max(0, Math.min(maxCam, this.p.x + 8 - VIEW_W / 2));
+
+    g.save();
+    g.scale(RENDER_SCALE, RENDER_SCALE);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+
     R.drawBackdrop(g, th, this.camX);
 
     g.save();
@@ -934,7 +944,7 @@ export class GameEngine {
     if (this.cfg.mode === "topic") R.drawGate(g, this.goalX, GROUND * TILE);
     if (this.cfg.mode === "tutorial") R.drawGoal(g, this.goalX, GROUND * TILE, this.t);
 
-    for (const n of this.npcs) R.drawPerson(g, n.x, n.y, n.look, { frame: Math.floor(this.t / 40) % 2 });
+    for (const n of this.npcs) R.drawNPC(g, n.x, n.y, n.cfg.name, n.cfg.role, this.t);
     for (const e of this.enemies) {
       if (e.alive) R.drawEnemy(g, e.kind, e.x + 5, e.y + e.h, e.dir, Math.floor(this.t / 12) % 2);
     }
@@ -957,13 +967,15 @@ export class GameEngine {
     g.textAlign = "left";
     for (const tx of this.texts) {
       g.fillStyle = tx.color;
-      g.font = "bold 7px monospace";
+      g.font = "bold 8px sans-serif";
       g.fillText(tx.text, tx.x, tx.y);
     }
-    g.restore();
+    g.restore(); // camera translate
+
     if (p.inv > 60) {
-      g.fillStyle = "rgba(239,68,68,0.12)";
+      g.fillStyle = "rgba(239,68,68,0.14)";
       g.fillRect(0, 0, VIEW_W, VIEW_H);
     }
+    g.restore(); // scale
   }
 }
