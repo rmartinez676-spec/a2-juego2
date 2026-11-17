@@ -658,7 +658,7 @@ export function drawBoss(
 }
 
 // ==========================================
-// DIBUJO DE ENEMIGOS BUROCRÁTICOS 3D
+// DIBUJO DE ENEMIGOS BUROCRÁTICOS 3D ULTRA DETALLADOS
 // ==========================================
 export function drawEnemy(
   g: CanvasRenderingContext2D,
@@ -670,65 +670,254 @@ export function drawEnemy(
 ): void {
   g.save();
 
-  // Sombra
-  g.fillStyle = "rgba(0,0,0,0.25)";
+  // Sombra dinámica con pulso
+  const shadowW = kind === "burocrata" ? 8 : 7;
+  g.fillStyle = "rgba(0,0,0,0.3)";
   g.beginPath();
-  g.ellipse(x, y - 0.5, 6, 2, 0, 0, Math.PI * 2);
+  g.ellipse(x, y - 0.5, shadowW, 2.5, 0, 0, Math.PI * 2);
   g.fill();
 
   if (kind === "papeleo") {
-    // Carpeta de expediente administrativo con sello rojo
+    // 📂 "EXPEDIENTE REBELDE" - Carpeta ministerial con hojas al viento, sello y ojos pícaros
+    const hop = frame === 1 ? -2 : 0;
+    const flap = Math.sin(frame * Math.PI) * 1.5;
+
+    // Hojas interiores que sobresalen y aletean
     g.fillStyle = "#f8fafc";
     g.beginPath();
-    g.roundRect(x - 6, y - 12, 12, 11, 2);
+    g.roundRect(x - 6, y - 16 + hop + flap, 11, 7, 1);
     g.fill();
-    g.strokeStyle = "#94a3b8";
+    g.fillStyle = "#f1f5f9";
+    g.beginPath();
+    g.roundRect(x - 4, y - 18 + hop - flap, 10, 6, 1);
+    g.fill();
+
+    // Carpeta exterior manila con textura degradada 3D
+    const fGrad = g.createLinearGradient(x - 7, y - 14 + hop, x + 7, y - 1 + hop);
+    fGrad.addColorStop(0, "#fbbf24");
+    fGrad.addColorStop(0.6, "#d97706");
+    fGrad.addColorStop(1, "#92400e");
+    g.fillStyle = fGrad;
+    g.beginPath();
+    g.roundRect(x - 7, y - 14 + hop, 14, 13, 2);
+    g.fill();
+    g.strokeStyle = "#78350f";
     g.lineWidth = 0.8;
     g.stroke();
 
-    // Cinta y sello oficial rojo
-    g.fillStyle = "#ef4444";
-    g.fillRect(x - 6, y - 7, 12, 2);
+    // Cinta oficial carmesí cruzada
+    g.fillStyle = "#dc2626";
+    g.fillRect(x - 7, y - 8 + hop, 14, 2.5);
+
+    // Sello oficial lacre rojo en relieve
+    const sGrad = g.createRadialGradient(x + (dir > 0 ? 2 : -2), y - 7 + hop, 1, x + (dir > 0 ? 2 : -2), y - 7 + hop, 3.5);
+    sGrad.addColorStop(0, "#ef4444");
+    sGrad.addColorStop(1, "#991b1b");
+    g.fillStyle = sGrad;
     g.beginPath();
-    g.arc(x + 2, y - 6, 3, 0, Math.PI * 2);
+    g.arc(x + (dir > 0 ? 2 : -2), y - 7 + hop, 3.5, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "#fef08a";
+    g.fillRect(x + (dir > 0 ? 1.5 : -2.5), y - 7.5 + hop, 1, 1); // Relieve sello
+
+    // Ojos grandes caricatura estilo Mario Koopa
+    const eyeX = dir > 0 ? 1 : -4;
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.arc(x + eyeX, y - 10 + hop, 2.2, 0, Math.PI * 2);
+    g.arc(x + eyeX + 4, y - 10 + hop, 2.2, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "#0f172a";
+    g.beginPath();
+    g.arc(x + eyeX + (dir > 0 ? 1 : -0.5), y - 10 + hop, 1.2, 0, Math.PI * 2);
+    g.arc(x + eyeX + 4 + (dir > 0 ? 1 : -0.5), y - 10 + hop, 1.2, 0, Math.PI * 2);
     g.fill();
 
-    // Ojitos caricatura
-    g.fillStyle = "#0f172a";
-    g.fillRect(x - 3, y - 10, 2, 2);
-    g.fillRect(x + 2, y - 10, 2, 2);
+    // Cejas enfadadas
+    g.strokeStyle = "#7f1d1d";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x + eyeX - 1, y - 12 + hop);
+    g.lineTo(x + eyeX + 2, y - 11 + hop);
+    g.moveTo(x + eyeX + 2, y - 11 + hop);
+    g.lineTo(x + eyeX + 5, y - 12 + hop);
+    g.stroke();
+
+    // Zapatitos que corren
+    g.fillStyle = "#1e293b";
+    if (frame === 0) {
+      g.fillRect(x - 5, y - 2, 4, 2.5);
+      g.fillRect(x + 1, y - 1, 4, 2);
+    } else {
+      g.fillRect(x - 5, y - 1, 4, 2);
+      g.fillRect(x + 1, y - 2, 4, 2.5);
+    }
+
   } else if (kind === "sello") {
-    // Sello ministerial de madera con mango de latón
-    g.fillStyle = "#f59e0b";
-    g.fillRect(x - 2, y - 13, 4, 4); // Pomo latón
-    g.fillStyle = "#78350f";
-    g.fillRect(x - 4, y - 9, 8, 4); // Mango madera
-    g.fillStyle = "#dc2626";
+    // 🔏 "SELLO MINISTERIAL DENEGADO" - Sello de caoba con pomo de oro que estampa con humo
+    const stampHop = frame === 1 ? -4 : 0;
+    const isSlam = frame === 0;
+
+    // Mango de caoba torneado 3D
+    const wGrad = g.createLinearGradient(x - 3, 0, x + 3, 0);
+    wGrad.addColorStop(0, "#78350f");
+    wGrad.addColorStop(0.5, "#b45309");
+    wGrad.addColorStop(1, "#451a03");
+
+    // Pomo superior dorado esférico
+    const bGrad = g.createRadialGradient(x - 1, y - 16 + stampHop, 1, x, y - 15 + stampHop, 3);
+    bGrad.addColorStop(0, "#fef08a");
+    bGrad.addColorStop(0.5, "#f59e0b");
+    bGrad.addColorStop(1, "#78350f");
+    g.fillStyle = bGrad;
     g.beginPath();
-    g.roundRect(x - 7, y - 5, 14, 5, 1); // Base caucho
+    g.arc(x, y - 15 + stampHop, 3.2, 0, Math.PI * 2);
     g.fill();
-  } else if (kind === "burocrata") {
-    // Maletín ejecutivo de piel con herrajes dorados
-    g.fillStyle = "#451a03";
+
+    // Mango
+    g.fillStyle = wGrad;
     g.beginPath();
-    g.roundRect(x - 7, y - 11, 14, 10, 2);
-    g.fill();
-    g.fillStyle = "#facc15";
-    g.fillRect(x - 1.5, y - 9, 3, 3); // Cerradura oro
-    g.fillStyle = "#ffffff";
-    g.fillRect(x + 2, y - 13, 4, 3); // Papeles asomando
-  } else {
-    // Silencio administrativo (fantasma flotante)
-    g.fillStyle = "rgba(224, 242, 254, 0.85)";
-    g.beginPath();
-    g.arc(x, y - 9, 6, Math.PI, 0);
-    g.lineTo(x + 6, y - 2);
-    g.lineTo(x - 6, y - 2);
+    g.moveTo(x - 2, y - 12 + stampHop);
+    g.lineTo(x + 2, y - 12 + stampHop);
+    g.lineTo(x + 4, y - 6 + stampHop);
+    g.lineTo(x - 4, y - 6 + stampHop);
     g.closePath();
     g.fill();
+
+    // Base pesada de latón y caucho rojo
+    g.fillStyle = "#eab308";
+    g.fillRect(x - 6, y - 6 + stampHop, 12, 2);
+    g.fillStyle = "#dc2626";
+    g.beginPath();
+    g.roundRect(x - 7, y - 4 + stampHop, 14, 4, 1);
+    g.fill();
+
+    // Si está impactando contra el suelo (slam): marca de tinta y nubes de polvo
+    if (isSlam) {
+      g.fillStyle = "rgba(239, 68, 68, 0.4)";
+      g.fillRect(x - 8, y - 1, 16, 1.5);
+      g.fillStyle = "rgba(255, 255, 255, 0.7)";
+      g.beginPath();
+      g.arc(x - 9, y - 1, 1.5, 0, Math.PI * 2);
+      g.arc(x + 9, y - 1, 1.5, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // Ojos malévolos en la base del sello
+    g.fillStyle = "#ffffff";
+    g.fillRect(x - 4, y - 3 + stampHop, 3, 2);
+    g.fillRect(x + 1, y - 3 + stampHop, 3, 2);
+    g.fillStyle = "#7f1d1d";
+    g.fillRect(x - 3 + (dir > 0 ? 1 : 0), y - 3 + stampHop, 1.5, 1.5);
+    g.fillRect(x + 2 + (dir > 0 ? 1 : 0), y - 3 + stampHop, 1.5, 1.5);
+
+  } else if (kind === "burocrata") {
+    // 💼 "MALETÍN VORAZ" - Maletín ejecutivo de cuero que abre fauces con dientes dorados
+    const jawOpen = frame === 1 ? 3 : 0;
+
+    // Cuerpo superior del maletín (tapa)
+    const lGrad = g.createLinearGradient(x - 8, y - 14, x + 8, y - 1);
+    lGrad.addColorStop(0, "#451a03");
+    lGrad.addColorStop(0.5, "#291307");
+    lGrad.addColorStop(1, "#1c0d02");
+    g.fillStyle = lGrad;
+    g.beginPath();
+    g.roundRect(x - 8, y - 13 - jawOpen, 16, 6, 2);
+    g.fill();
+
+    // Asa dorada superior
+    g.strokeStyle = "#eab308";
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(x, y - 14 - jawOpen, 3, Math.PI, 0);
+    g.stroke();
+
+    // Interior de la boca cuando abre
+    if (jawOpen > 0) {
+      g.fillStyle = "#7f1d1d";
+      g.fillRect(x - 7, y - 8, 14, 4);
+
+      // Dientes afilados de oro en los cierres
+      g.fillStyle = "#facc15";
+      for (let i = -6; i <= 4; i += 3) {
+        g.beginPath();
+        g.moveTo(x + i, y - 8);
+        g.lineTo(x + i + 1.5, y - 6);
+        g.lineTo(x + i + 3, y - 8);
+        g.fill();
+        g.beginPath();
+        g.moveTo(x + i, y - 4);
+        g.lineTo(x + i + 1.5, y - 6);
+        g.lineTo(x + i + 3, y - 4);
+        g.fill();
+      }
+    }
+
+    // Parte inferior del maletín
+    g.fillStyle = lGrad;
+    g.beginPath();
+    g.roundRect(x - 8, y - 6, 16, 6, 1.5);
+    g.fill();
+
+    // Cantoneras de latón en las esquinas
+    g.fillStyle = "#facc15";
+    g.fillRect(x - 8, y - 13 - jawOpen, 3, 2);
+    g.fillRect(x + 5, y - 13 - jawOpen, 3, 2);
+    g.fillRect(x - 8, y - 2, 3, 2);
+    g.fillRect(x + 5, y - 2, 3, 2);
+
+    // Ojos rojos acechantes en el frente
+    g.fillStyle = "#ef4444";
+    g.beginPath();
+    g.arc(x - 3, y - 9 - (jawOpen ? 1 : 0), 1.5, 0, Math.PI * 2);
+    g.arc(x + 3, y - 9 - (jawOpen ? 1 : 0), 1.5, 0, Math.PI * 2);
+    g.fill();
+
+  } else {
+    // ⏳ "FANTASMA DEL SILENCIO ADMINISTRATIVO" - Espectro místico con reloj de arena y runas de plazos
+    const floatY = Math.sin((frame ? 4 : 0)) * 2;
+
+    // Aura etérea brillante
+    g.shadowColor = "rgba(56, 189, 248, 0.8)";
+    g.shadowBlur = 6;
+
+    // Cuerpo espectral
+    const gGrad = g.createRadialGradient(x, y - 10 + floatY, 2, x, y - 8 + floatY, 8);
+    gGrad.addColorStop(0, "#e0f2fe");
+    gGrad.addColorStop(0.6, "#7dd3fc");
+    gGrad.addColorStop(1, "rgba(2, 132, 199, 0)");
+    g.fillStyle = gGrad;
+    g.beginPath();
+    g.arc(x, y - 10 + floatY, 7, Math.PI, 0);
+    g.lineTo(x + 6, y - 2 + floatY);
+    g.lineTo(x + 3, y - 4 + floatY);
+    g.lineTo(x, y - 1 + floatY);
+    g.lineTo(x - 3, y - 4 + floatY);
+    g.lineTo(x - 6, y - 2 + floatY);
+    g.closePath();
+    g.fill();
+
+    g.shadowBlur = 0; // reset
+
+    // Reloj de arena dorado en el pecho (símbolo del plazo legal que se agota)
+    g.fillStyle = "#facc15";
+    g.beginPath();
+    g.moveTo(x - 3, y - 12 + floatY);
+    g.lineTo(x + 3, y - 12 + floatY);
+    g.lineTo(x - 3, y - 6 + floatY);
+    g.lineTo(x + 3, y - 6 + floatY);
+    g.closePath();
+    g.fill();
+    // Granos de arena que caen
+    g.fillStyle = "#fef08a";
+    g.fillRect(x - 0.5, y - 9 + floatY, 1, 1.5);
+
+    // Ojos luminosos cian
     g.fillStyle = "#0369a1";
-    g.fillRect(x - 3, y - 8, 2, 2);
-    g.fillRect(x + 1, y - 8, 2, 2);
+    g.beginPath();
+    g.arc(x - 2, y - 13 + floatY, 1.2, 0, Math.PI * 2);
+    g.arc(x + 2, y - 13 + floatY, 1.2, 0, Math.PI * 2);
+    g.fill();
   }
 
   g.restore();

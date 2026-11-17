@@ -1,5 +1,6 @@
-// Contenido inicial del temario (editable después desde /admin).
-// Referencias verificadas con el BOE; revisa siempre la convocatoria oficial.
+// Contenido oficial del temario para el Cuerpo de Gestión de la Administración Civil del Estado (A2).
+// Programa oficial aprobado por el INAP y publicado en el BOE.
+// Incluye referencias y texto literal del ordenamiento jurídico para cada pregunta.
 
 export interface SyllabusQuestion {
   prompt: string;
@@ -7,6 +8,8 @@ export interface SyllabusQuestion {
   answer: 0 | 1 | 2 | 3;
   explanation: string;
   reference?: string;
+  legalArticle?: string;
+  legalText?: string;
 }
 
 export interface SyllabusTopic {
@@ -46,37 +49,38 @@ export const BOE_SOURCES: BoeSourceSeed[] = [
   { boeId: "BOE-A-2015-10566", shortName: "Ley 40/2015 (LRJSP)" },
   { boeId: "BOE-A-2015-11719", shortName: "TREBEP (RDL 5/2015)" },
   { boeId: "BOE-A-2003-21614", shortName: "LGP (Ley 47/2003)" },
-  { boeId: "BOE-A-2003-23186", shortName: "LGT (Ley 58/2003)" },
   { boeId: "BOE-A-2017-12902", shortName: "LCSP (Ley 9/2017)" },
   { boeId: "BOE-A-2013-12887", shortName: "Transparencia (Ley 19/2013)" },
   { boeId: "BOE-A-2018-16673", shortName: "LOPDGDD (LO 3/2018)" },
   { boeId: "BOE-A-2007-6115", shortName: "Igualdad (LO 3/2007)" },
+  { boeId: "BOE-A-1984-28229", shortName: "Incompatibilidades (Ley 53/1984)" },
+  { boeId: "BOE-A-2015-11724", shortName: "LGSS (RDL 8/2015)" },
   { boeId: "BOE-A-1985-5392", shortName: "LBRL (Ley 7/1985)" },
-  { boeId: "BOE-A-2022-7191", shortName: "ENS (RD 311/2022)" },
 ];
 
-// Personajes de la Plaza (mundo inicial / tutorial)
 export const HUB_NPCS: { name: string; role: string; lines: string[] }[] = [
   {
     name: "Don Ramón",
-    role: "Conserje de la Plaza",
+    role: "Conserje Mayor del INAP",
     lines: [
       "¡Bienvenida a la Plaza de la Administración, Lucía!",
-      "Cada mundo es un bloque del temario. Dentro hay temas: en cada tema encontrarás personajes que te lo explican.",
-      "Salta con ESPACIO o ↑ y pulsa X (PUÑO) para romper rocas y golpear papeleos. Puedes pisarles la cabeza.",
-      "Los bloques '?' guardan preguntas: acierta para ganar sellos. Al final de cada tema hay una prueba: necesitas 3 de 5.",
+      "Este juego cubre los 6 bloques oficiales del programa de Gestión de la Administración Civil del Estado (A2).",
+      "Cada mundo es un bloque de estudio con sus temas oficiales: dentro encontrarás a los preparadores y letrados.",
+      "Golpea con la cabeza los bloques '?' para poner a prueba tus conocimientos y ganar sellos de oro.",
     ],
   },
   {
-    name: "Marta",
-    role: "Opositora veterana",
+    name: "Doña Elena",
+    role: "Presidenta de la CPS",
     lines: [
-      "Al final de cada bloque te espera un jefe. Responde sus preguntas para derrotarlo.",
-      "Cada acierto le quita energía; cada fallo te cuesta una vida. ¡Estudia con calma!",
-      "Al final de todo está el Examen Final, que mezcla el temario completo. ¡Mucha suerte!",
+      "Al final de cada tema deberás superar una prueba oficial ante la puerta del ministerio.",
+      "Al término de cada bloque te espera el Jefe Final: responde sus preguntas jurídicas para avanzar.",
+      "Cada fallo en el nivel de examen oficial resta puntuación conforme a la convocatoria del INAP (-0.33). ¡Mucho ánimo!",
     ],
   },
 ];
+
+export const TUTORIAL_TITLE = "Plaza de la Administración · Tutorial";
 
 const q = (
   prompt: string,
@@ -84,546 +88,812 @@ const q = (
   answer: 0 | 1 | 2 | 3,
   explanation: string,
   reference?: string,
-): SyllabusQuestion => ({ prompt, options, answer, explanation, reference });
+  legalArticle?: string,
+  legalText?: string,
+): SyllabusQuestion => ({ prompt, options, answer, explanation, reference, legalArticle, legalText });
 
 export const SYLLABUS: SyllabusBlock[] = [
+  // =========================================================================
+  // BLOQUE I: ORGANIZACIÓN DEL ESTADO Y DE LA ADMINISTRACIÓN PÚBLICA
+  // =========================================================================
   {
     number: 1,
-    title: "Constitución y organización del Estado",
-    ministry: "Congreso de los Diputados",
-    worldName: "Mundo 1 · Las Cortes Generales",
-    description: "Constitución de 1978, Cortes Generales, Gobierno, Poder Judicial, Tribunal Constitucional y Comunidades Autónomas.",
+    title: "Organización del Estado y de la Administración Pública",
+    ministry: "Congreso de los Diputados y Cortes Generales",
+    worldName: "Mundo 1 · Las Cortes y Órganos Constitucionales",
+    description: "Constitución de 1978, Derechos Fundamentales, Cortes Generales, Gobierno, Poder Judicial, AGE y Organización Territorial.",
     theme: "congreso",
     bossName: "Señor Quórum",
-    bossIntro: "Sin quórum no hay pleno, y sin Constitución no hay Estado. ¿Sabes lo que dice mi Carta Magna?",
+    bossIntro: "¡Sin quórum no hay sesión y sin dominar la Constitución no hay plaza en el Cuerpo de Gestión! ¡A ver qué sabes de las Cortes!",
     bossStyle: "quorum",
     topics: [
       {
-        title: "La Constitución de 1978",
-        summary: "Estructura, Título Preliminar, derechos fundamentales y reforma constitucional.",
+        title: "La Constitución de 1978 y Derechos Fundamentales",
+        summary: "Estructura constitucional, valores superiores, Título I y garantías de los derechos.",
         npcName: "Doña Carmen",
         npcRole: "Catedrática de Derecho Constitucional",
         npcLines: [
-          "La Constitución se aprobó en referéndum el 6 de diciembre de 1978 y es la norma suprema del ordenamiento.",
-          "El artículo 1.1 CE define España como un Estado social y democrático de Derecho.",
-          "Los derechos fundamentales y libertades públicas están en el Capítulo II del Título I (arts. 14 a 38).",
+          "La Constitución española de 1978 se estructura en un Título Preliminar y 10 Títulos numerados.",
+          "El artículo 1.1 proclama el Estado social y democrático de Derecho.",
+          "La sección primera del Capítulo II (arts. 15 a 29) goza de la máxima protección: recurso de amparo ante el TC.",
         ],
         tipName: "Julián",
-        tipRole: "Opositor veterano",
+        tipRole: "Opositor de A2 Estado",
         tipLines: [
-          "Reforma: art. 167 (ordinaria, 3/5 de cada Cámara) y art. 168 (agravada: 2/3, disolución de Cortes y referéndum).",
+          "Recuerda: la reforma ordinaria (art. 167) exige 3/5 de cada Cámara. La agravada (art. 168) exige 2/3, disolución y referéndum.",
         ],
         boeIds: ["BOE-A-1978-31229"],
         questions: [
-          q("¿En qué año se aprobó en referéndum la Constitución Española?", ["1975", "1978", "1982", "1986"], 1, "Se ratificó en referéndum el 6 de diciembre de 1978.", "Constitución 1978"),
-          q("Según el artículo 1.1 CE, España se constituye en un Estado…", ["Federal y plurinacional", "Social y democrático de Derecho", "Confederal y autonómico", "Unitario y centralizado"], 1, "El art. 1.1 CE proclama el Estado social y democrático de Derecho.", "Art. 1.1 CE"),
-          q("¿Qué mayoría se exige para la reforma constitucional ordinaria?", ["Mayoría simple del Congreso", "3/5 de cada Cámara", "Referéndum obligatorio siempre", "Dos tercios del Senado"], 1, "El art. 167 exige 3/5 de cada Cámara.", "Art. 167 CE"),
-          q("La reforma total de la Constitución requiere:", ["3/5 de las Cámaras", "2/3 de cada Cámara, disolución de las Cortes y referéndum", "Solo aprobación del Gobierno", "Mayoría absoluta del Senado"], 1, "El art. 168 prevé el procedimiento agravado.", "Art. 168 CE"),
-          q("¿Qué artículo establece que la forma política del Estado es la Monarquía parlamentaria?", ["Art. 1.3", "Art. 2", "Art. 56", "Art. 9"], 0, "Art. 1.3 CE: la forma política del Estado español es la Monarquía parlamentaria.", "Art. 1.3 CE"),
-          q("El artículo 9.3 CE garantiza, entre otros, los principios de:", ["Legalidad, jerarquía normativa y seguridad jurídica", "Unidad de caja", "Especialidad presupuestaria", "Descentralización administrativa"], 0, "Art. 9.3: legalidad, jerarquía normativa, publicidad, irretroactividad, seguridad jurídica e interdicción de la arbitrariedad.", "Art. 9.3 CE"),
+          q(
+            "Según el artículo 1.1 de la Constitución, España se constituye en un Estado…",
+            ["Federal y plurinacional", "Social y democrático de Derecho", "Confederal de las Autonomías", "Unitario y centralizado"],
+            1,
+            "El art. 1.1 CE establece la forma de Estado social y democrático de Derecho.",
+            "Constitución Española",
+            "Artículo 1.1 CE",
+            "«España se constituye en un Estado social y democrático de Derecho, que propugna como valores superiores de su ordenamiento jurídico la libertad, la justicia, la igualdad y el pluralismo político.»"
+          ),
+          q(
+            "¿Qué derechos gozan del procedimiento preferente y sumario ante los tribunales ordinarios y del recurso de amparo ante el TC?",
+            ["Los del Título I completo", "Los de la Sección 1.ª del Capítulo II del Título I más el artículo 14 y 30.2", "Solo los derechos políticos del artículo 23", "Los principios rectores del Capítulo III"],
+            1,
+            "El artículo 53.2 CE otorga tutela reforzada a los arts. 14 a 29 y a la objeción de conciencia del art. 30.2.",
+            "Constitución Española",
+            "Artículo 53.2 CE",
+            "«Cualquier ciudadano podrá recabar la tutela de las libertades y derechos reconocidos en el artículo 14 y la Sección primera del Capítulo segundo ante los Tribunales ordinarios por un procedimiento basado en los principios de preferencia y sumariedad y, en su caso, a través del recurso de amparo ante el Tribunal Constitucional.»"
+          ),
+          q(
+            "La reforma constitucional ordinaria regulada en el artículo 167 CE requiere la aprobación por:",
+            ["Mayoría simple del Congreso", "Mayoría de tres quintos de cada una de las Cámaras", "Dos tercios del Congreso y disolución de Cortes", "Mayoría absoluta del Senado"],
+            1,
+            "El art. 167.1 CE exige mayoría de 3/5 de cada una de las Cámaras.",
+            "Constitución Española",
+            "Artículo 167.1 CE",
+            "«Los proyectos de reforma constitucional deberán ser aprobados por una mayoría de tres quintos de cada una de las Cámaras. Si no hubiera acuerdo entre ambas, se intentará obtenerlo mediante la creación de una Comisión de composición paritaria de Diputados y Senadores.»"
+          ),
+          q(
+            "¿Cuál de las siguientes materias exige el procedimiento de reforma constitucional agravado del artículo 168 CE?",
+            ["La modificación del Título IV (Gobierno)", "La revisión total o la que afecte al Título Preliminar, Sección 1.ª del Cap. II del Título I o al Título II", "Cualquier reforma del Título VIII de las CCAA", "La reforma del Tribunal de Cuentas"],
+            1,
+            "El art. 168.1 CE reserva el procedimiento agravado a la revisión total, Título Preliminar, Sección 1.ª Cap. II Título I y Título II.",
+            "Constitución Española",
+            "Artículo 168.1 CE",
+            "«Cuando se propusiere la revisión total de la Constitución o una parcial que afecte al Título preliminar, al Capítulo segundo, Sección primera del Título I, o al Título II, se procederá a la aprobación del principio por mayoría de dos tercios de cada Cámara, y a la disolución inmediata de las Cortes.»"
+          ),
         ],
       },
       {
-        title: "Cortes Generales y Gobierno",
-        summary: "Congreso, Senado, investidura, moción de censura y decretos-leyes.",
+        title: "Cortes Generales y Órganos Constitucionales",
+        summary: "Congreso, Senado, investidura, control parlamentario, Tribunal Constitucional y Defensor del Pueblo.",
         npcName: "Marta del Pino",
         npcRole: "Letrada de las Cortes Generales",
         npcLines: [
-          "Las Cortes Generales representan al pueblo español y se componen del Congreso y del Senado (art. 66 CE).",
-          "El Congreso tiene 350 diputados elegidos por sufragio universal, libre, igual, directo y secreto (art. 68 CE).",
-          "El Gobierno dirige la política interior y exterior y la Administración civil y militar (art. 97 CE).",
+          "El Congreso se compone de un mínimo de 300 y un máximo de 400 Diputados; la LOREG fija 350.",
+          "El Senado es la Cámara de representación territorial (art. 69.1 CE).",
+          "El Tribunal Constitucional se compone de 12 miembros nombrados por el Rey por un período de 9 años.",
         ],
         tipName: "Pablo",
-        tipRole: "Opositor de Hacienda",
+        tipRole: "Opositor veterano",
         tipLines: [
-          "La moción de censura exige mayoría absoluta del Congreso (art. 113 CE).",
-          "Los decretos-leyes deben convalidarse en el Congreso en los 30 días siguientes a su promulgación (art. 86 CE).",
+          "Fíjate en las mayorías: el TC tiene 4 magistrados a propuesta del Congreso (3/5), 4 del Senado (3/5), 2 del Gobierno y 2 del CGPJ.",
         ],
         boeIds: ["BOE-A-1978-31229"],
         questions: [
-          q("¿Cuántos diputados componen el Congreso de los Diputados?", ["250", "300", "350", "400"], 2, "El art. 68.1 CE fija 350 diputados.", "Art. 68.1 CE"),
-          q("¿Qué mayoría se exige para aprobar una moción de censura?", ["Mayoría simple", "Mayoría absoluta del Congreso", "Tres quintos del Senado", "Unanimidad"], 1, "Art. 113 CE: mayoría absoluta del Congreso.", "Art. 113 CE"),
-          q("¿Cuánto dura el mandato de diputados y senadores?", ["2 años", "4 años", "5 años", "6 años"], 1, "Cuatro años, salvo disolución anticipada.", "Arts. 68.4 y 69.6 CE"),
-          q("Las leyes orgánicas requieren para su aprobación:", ["Mayoría simple en el Senado", "Mayoría absoluta del Congreso en una votación de conjunto", "Referéndum", "Dos tercios del Congreso"], 1, "Art. 81.2 CE: mayoría absoluta del Congreso en votación de conjunto.", "Art. 81.2 CE"),
-          q("En la investidura del Presidente del Gobierno:", ["Lo elige directamente el Senado", "El Rey propone un candidato tras consultar a los grupos y el Congreso lo invista", "Lo designa el Tribunal Supremo", "Se elige por sorteo"], 1, "Art. 99 CE: consultas del Rey, propuesta de candidato e investidura por el Congreso.", "Art. 99 CE"),
-          q("¿En qué plazo deben convalidarse los decretos-leyes?", ["7 días hábiles", "30 días siguientes a su promulgación", "60 días naturales", "3 meses"], 1, "Art. 86.2 CE: en el plazo de 30 días siguientes a su promulgación.", "Art. 86.2 CE"),
+          q(
+            "El Congreso de los Diputados debe convalidar o derogar un Real Decreto-ley en el plazo de:",
+            ["15 días naturales", "30 días siguientes a su promulgación", "60 días hábiles", "Dos meses desde su entrada en vigor"],
+            1,
+            "El artículo 86.2 CE establece el plazo perentorio de 30 días para su debate y votación en el Congreso.",
+            "Constitución Española",
+            "Artículo 86.2 CE",
+            "«Los Decretos-leyes deberán ser inmediatamente sometidos a debate y votación de totalidad al Congreso de los Diputados, convocado al efecto si no estuviere reunido, en el plazo de los treinta días siguientes a su promulgación.»"
+          ),
+          q(
+            "La moción de censura debe ser propuesta al menos por:",
+            ["La décima parte de los Diputados", "La mayoría absoluta del Senado", "Una cuarta parte del Congreso", "50 Diputados o 50 Senadores"],
+            0,
+            "El artículo 113.2 CE exige que la moción sea propuesta al menos por la décima parte de los Diputados.",
+            "Constitución Española",
+            "Artículo 113.2 CE",
+            "«La moción de censura deberá ser propuesta al menos por la décima parte de los Diputados, y habrá de incluir un candidato a la Presidencia del Gobierno.»"
+          ),
+          q(
+            "El Defensor del Pueblo es designado por las Cortes Generales para un mandato de:",
+            ["3 años", "5 años", "4 años", "9 años"],
+            1,
+            "El artículo 2.2 de la Ley Orgánica 3/1981 del Defensor del Pueblo fija el mandato en 5 años.",
+            "Ley Orgánica 3/1981",
+            "Artículo 2.2 LO 3/1981",
+            "«El Defensor del Pueblo será elegido por las Cortes Generales para un periodo de cinco años, y podrá ser reelegido.»"
+          ),
         ],
       },
       {
-        title: "Poder Judicial, Tribunal Constitucional y CCAA",
-        summary: "Independencia judicial, CGPJ, TC y organización territorial del Estado.",
-        npcName: "Ana Ruiz",
-        npcRole: "Magistrada suplente",
+        title: "Gobierno, Poder Judicial y Organización Territorial",
+        summary: "Gobierno, Ley 50/1997, CGPJ, Comunidades Autónomas y Administración Local (Ley 7/1985).",
+        npcName: "Don Fernando",
+        npcRole: "Magistrado de la Sala de lo Contencioso",
         npcLines: [
-          "El Poder Judicial es independiente y lo ejercen jueces y magistrados integrantes del Poder Judicial (arts. 117 a 127 CE).",
-          "El Consejo General del Poder Judicial es el órgano de gobierno del Poder Judicial (art. 122 CE).",
-          "El Tribunal Constitucional garantiza la supremacía de la Constitución y lo integran 12 magistrados (art. 159 CE).",
+          "El Gobierno se compone del Presidente, de los Vicepresidentes, en su caso, y de los Ministros (art. 98.1 CE).",
+          "La justicia emana del pueblo y se administra en nombre del Rey por Jueces y Magistrados independientes (art. 117.1 CE).",
+          "El municipio es la entidad básica de la organización territorial del Estado (art. 137 CE).",
         ],
-        tipName: "Hugo",
-        tipRole: "Opositor de Justicia",
+        tipName: "Lucía Preparadora",
+        tipRole: "Funcionaria de Carrera A2",
         tipLines: [
-          "Vía del art. 143 (acceso ordinario) y vía del art. 151 (acceso reforzado, con referéndum).",
-          "El art. 155 permite al Gobierno adoptar medidas ante incumplimientos graves de una CCAA, previo requerimiento y con autorización del Senado.",
+          "Distingue: los órganos superiores de la AGE son Ministros y Secretarios de Estado; los directivos son Subsecretarios, Secretarios Generales y Directores Generales (art. 55 Ley 40/2015).",
         ],
-        boeIds: ["BOE-A-1978-31229"],
+        boeIds: ["BOE-A-1978-31229", "BOE-A-2015-10566", "BOE-A-1985-5392"],
         questions: [
-          q("¿Cuántos magistrados componen el Tribunal Constitucional?", ["9", "10", "12", "15"], 2, "El art. 159.1 CE fija 12 magistrados.", "Art. 159.1 CE"),
-          q("¿Cuál es el órgano de gobierno del Poder Judicial?", ["El Tribunal Supremo", "El Consejo General del Poder Judicial", "La Fiscalía General del Estado", "El Ministerio de Justicia"], 1, "El CGPJ es el órgano de gobierno del Poder Judicial.", "Art. 122 CE"),
-          q("El Tribunal Constitucional se ocupa, entre otras cosas, de:", ["Recursos de amparo y conflictos constitucionales", "Aprobar los presupuestos", "Nombrar al Presidente del Gobierno", "Gestionar la Seguridad Social"], 0, "Art. 161 CE: recursos de inconstitucionalidad, amparo y conflictos.", "Art. 161 CE"),
-          q("La vía del artículo 151 CE para constituir una Comunidad Autónoma se caracteriza por:", ["Ser la vía lenta de cinco años", "Ser una vía reforzada que exige referéndum", "No existir", "Ser exclusiva de Ceuta y Melilla"], 1, "Art. 151 CE: acceso reforzado (referéndum).", "Art. 151 CE"),
-          q("El artículo 155 CE permite:", ["Declarar el estado de alarma", "Adoptar medidas ante incumplimiento grave de obligaciones por una CCAA", "Disolver el Congreso", "Suspender el Estatuto del Presidente"], 1, "Art. 155 CE: medidas ante incumplimiento grave de una CCAA.", "Art. 155 CE"),
-          q("¿Qué artículo de la CE establece la organización territorial en municipios, provincias y CCAA?", ["Art. 137", "Art. 1.2", "Art. 56", "Art. 99"], 0, "Art. 137 CE: el Estado se organiza territorialmente en municipios, provincias y CCAA.", "Art. 137 CE"),
+          q(
+            "Según el artículo 55 de la Ley 40/2015 (LRJSP), son órganos superiores de los ministerios:",
+            ["Los Subsecretarios y Directores Generales", "Los Ministros y los Secretarios de Estado", "Los Delegados del Gobierno", "Los Secretarios Generales Técnicos"],
+            1,
+            "Los Ministros y Secretarios de Estado son órganos superiores; los demás son directivos.",
+            "Ley 40/2015 (LRJSP)",
+            "Artículo 55.2 Ley 40/2015",
+            "«Son órganos superiores los Ministros y los Secretarios de Estado. Son órganos directivos los Subsecretarios y Secretarios generales; los Secretarios generales técnicos y Directores generales; y los Subdirectores generales.»"
+          ),
+          q(
+            "El Consejo General del Poder Judicial se compone del Presidente del Tribunal Supremo y de:",
+            ["12 Vocales", "20 Vocales nombrados por el Rey por un período de cinco años", "15 Magistrados vitalicios", "25 miembros elegidos por los jueces"],
+            1,
+            "El artículo 122.3 CE fija la composición en 20 vocales por un período de 5 años.",
+            "Constitución Española",
+            "Artículo 122.3 CE",
+            "«El Consejo General del Poder Judicial estará integrado por el Presidente del Tribunal Supremo, que lo presidirá, y por veinte miembros nombrados por el Rey por un periodo de cinco años.»"
+          ),
+          q(
+            "El gobierno y la administración municipal corresponde al Ayuntamiento, integrado por:",
+            ["El Alcalde y el Secretario municipal", "El Alcalde y los Concejales", "El Pleno y la Junta de Portavoces", "El Presidente de la Diputación y el Alcalde"],
+            1,
+            "El artículo 140 CE y el art. 19 LBRL atribuyen el gobierno municipal al Alcalde y los Concejales.",
+            "Constitución Española",
+            "Artículo 140 CE",
+            "«La Constitución garantiza la autonomía de los municipios. Estos gozarán de personalidad jurídica plena. Su gobierno y administración corresponde a sus respectivos Ayuntamientos, integrados por los Alcaldes y los Concejales.»"
+          ),
         ],
       },
     ],
   },
+
+  // =========================================================================
+  // BLOQUE II: UNIÓN EUROPEA
+  // =========================================================================
   {
     number: 2,
-    title: "Derecho administrativo y procedimiento",
-    ministry: "Ministerio de la Presidencia",
-    worldName: "Mundo 2 · Ventanilla del Procedimiento",
-    description: "Régimen jurídico del sector público, procedimiento administrativo común, recursos, silencio y responsabilidad patrimonial.",
-    theme: "ministerio",
-    bossName: "Ministro del Silencio",
-    bossIntro: "Callar también es una respuesta administrativa… ¿o no? Demuéstrame que conoces el procedimiento.",
-    bossStyle: "stamp",
-    topics: [
-      {
-        title: "Régimen jurídico del sector público (Ley 40/2015)",
-        summary: "Principios de actuación, organización, relaciones interadministrativas y responsabilidad patrimonial.",
-        npcName: "Sonia Ortega",
-        npcRole: "Jefa de Servicio de Régimen Jurídico",
-        npcLines: [
-          "La Ley 40/2015 regula el régimen jurídico de las Administraciones Públicas y del sector público institucional.",
-          "Principios de actuación: eficacia, jerarquía, descentralización, desconcentración y coordinación (art. 3).",
-          "La responsabilidad patrimonial de las Administraciones se regula en los arts. 32 y siguientes.",
-        ],
-        tipName: "Ramón",
-        tipRole: "Opositor de Gestión",
-        tipLines: [
-          "Las relaciones entre Administraciones se rigen por la lealtad institucional y la colaboración (Título III).",
-        ],
-        boeIds: ["BOE-A-2015-10566"],
-        questions: [
-          q("Según la Ley 40/2015, ¿cuál NO es un principio de actuación de las AAPP?", ["Eficacia", "Jerarquía", "Improvisación", "Coordinación"], 2, "El art. 3 enumera eficacia, jerarquía, descentralización, desconcentración y coordinación, entre otros.", "Art. 3 Ley 40/2015"),
-          q("La responsabilidad patrimonial de las AAPP es de carácter:", ["Subjetivo y solo por dolo", "Directo (objetivo), por lesiones antijurídicas", "Subsidiario de los funcionarios", "Inexistente"], 1, "Responsabilidad directa de la Administración por lesiones que el particular no tenga el deber jurídico de soportar.", "Arts. 32 y ss. Ley 40/2015"),
-          q("¿Qué figura transfiere competencias a otra entidad con personalidad jurídica propia?", ["Desconcentración", "Descentralización", "Avocación", "Encomienda de gestión"], 1, "La descentralización implica personalidad jurídica propia de la entidad receptora.", "Art. 3 Ley 40/2015"),
-          q("¿Qué ley regula la organización de la Administración General del Estado y del Gobierno?", ["Ley 50/1997, del Gobierno", "Ley 39/2015", "Ley 19/2013", "Ley 9/2017"], 0, "La Ley 50/1997, del Gobierno, regula su organización y funcionamiento.", "Ley 50/1997"),
-          q("El sector público institucional comprende, entre otros:", ["Solo los ministerios", "Organismos autónomos, entidades públicas empresariales y consorcios", "Solo las CCAA", "Empresas privadas concesionarias"], 1, "Tipología del sector público institucional (Ley 40/2015).", "Ley 40/2015"),
-          q("Las relaciones entre Administraciones se rigen principalmente por:", ["Lealtad institucional", "Mayoría absoluta", "Silencio positivo", "Autonomía federal"], 0, "Principios de lealtad institucional, colaboración, coordinación y cooperación.", "Título III Ley 40/2015"),
-        ],
-      },
-      {
-        title: "Procedimiento administrativo común (Ley 39/2015)",
-        summary: "Iniciación, registros, subsanación, plazos, obligación de relacionarse electrónicamente y notificación.",
-        npcName: "Iván Castro",
-        npcRole: "Jefe del Registro General",
-        npcLines: [
-          "La Ley 39/2015 regula el procedimiento administrativo común y los derechos de las personas en sus relaciones con la Administración.",
-          "Las solicitudes pueden presentarse en el registro electrónico, en Correos o en las oficinas de asistencia en materia de registro (art. 16).",
-          "Si la solicitud tiene defectos, se requiere la subsanación en 10 días (art. 68).",
-        ],
-        tipName: "Berta",
-        tipRole: "Letrada de recursos",
-        tipLines: [
-          "Las personas jurídicas y los profesionales colegiados están obligados a relacionarse electrónicamente (art. 14).",
-          "Las notificaciones se practicarán en el plazo máximo de diez días desde que el acto fue dictado (art. 40.3).",
-        ],
-        boeIds: ["BOE-A-2015-10565"],
-        questions: [
-          q("¿En qué plazo debe subsanarse una solicitud defectuosa según la Ley 39/2015?", ["5 días", "10 días", "15 días hábiles", "1 mes"], 1, "Art. 68: diez días para subsanar.", "Art. 68 Ley 39/2015"),
-          q("¿Cuál es el plazo máximo para resolver si la norma no lo fija?", ["1 mes", "3 meses", "6 meses", "1 año"], 1, "Art. 21.3: tres meses salvo que la norma establezca otro.", "Art. 21.3 Ley 39/2015"),
-          q("El procedimiento administrativo puede iniciarse:", ["Siempre de oficio", "A solicitud del interesado o de oficio", "Únicamente por denuncia", "Solo por silencio"], 1, "Puede iniciarse de oficio o a solicitud del interesado.", "Ley 39/2015"),
-          q("La obligación de relacionarse electrónicamente con la Administración afecta a:", ["Todos los ciudadanos sin excepción", "Personas jurídicas, profesionales colegiados y otros colectivos", "Solo a los funcionarios", "A nadie"], 1, "Art. 14: colectivos obligados a relacionarse por medios electrónicos.", "Art. 14 Ley 39/2015"),
-          q("Para qué sirve la notificación de un acto administrativo:", ["Para surtir efectos y dar conocimiento al interesado", "Solo para informar al público", "Para publicarse siempre en el BOE", "No tiene efecto alguno"], 0, "La notificación produce efectos y da conocimiento del acto.", "Art. 40 Ley 39/2015"),
-          q("¿En qué plazo se practicarán las notificaciones desde que se dicta el acto?", ["10 días", "1 mes", "3 meses", "30 días hábiles"], 0, "Art. 40.3: plazo máximo de diez días.", "Art. 40.3 Ley 39/2015"),
-        ],
-      },
-      {
-        title: "Recursos, silencio y responsabilidad patrimonial",
-        summary: "Alzada, reposición, silencio administrativo, nulidad y reclamaciones por daños.",
-        npcName: "Teresa Vidal",
-        npcRole: "Subdirectora de Recursos",
-        npcLines: [
-          "Los recursos administrativos son la alzada y la reposición. La reposición es potestativa y previa a la vía judicial (arts. 121 y 124).",
-          "En procedimientos iniciados a solicitud del interesado, el silencio es con carácter general estimatorio (art. 24).",
-          "Los actos nulos de pleno derecho están tasados en el art. 47 de la Ley 39/2015.",
-        ],
-        tipName: "Gonzalo",
-        tipRole: "Técnico de la Administración",
-        tipLines: [
-          "Plazo de alzada y reposición: un mes (arts. 122 y 124).",
-          "La responsabilidad patrimonial prescribe al año de producirse el hecho (art. 67).",
-        ],
-        boeIds: ["BOE-A-2015-10565", "BOE-A-2015-10566"],
-        questions: [
-          q("El plazo para interponer recurso de alzada es de:", ["10 días", "1 mes", "2 meses", "6 meses"], 1, "Art. 122: un mes.", "Art. 122 Ley 39/2015"),
-          q("El silencio administrativo en procedimientos iniciados a solicitud del interesado es, con carácter general:", ["Desestimatorio", "Estimatorio (positivo), salvo excepciones legales", "Nulo", "Irrelevante"], 1, "Art. 24: silencio positivo con excepciones.", "Art. 24 Ley 39/2015"),
-          q("¿Cuál de estos actos es NULO de pleno derecho?", ["El dictado por órgano manifiestamente incompetente por razón de la materia", "Un acto con defecto formal leve", "Un acto anulable por plazo", "Un acto irregular"], 0, "Art. 47.1.b: órgano manifiestamente incompetente por razón de la materia.", "Art. 47.1 Ley 39/2015"),
-          q("La reposición es un recurso:", ["Judicial", "Potestativo y previo al contencioso-administrativo", "Obligatorio siempre", "Ante el Tribunal Constitucional"], 1, "Recurso potestativo; puede optarse por acudir directamente a la jurisdicción.", "Art. 124 Ley 39/2015"),
-          q("Para reconocer responsabilidad patrimonial se exige:", ["Lesión real, efectiva, evaluable económicamente e individualizada, sin deber de soportarla", "Culpa grave", "Denuncia previa obligatoria", "Sentencia penal condenatoria"], 0, "Requisitos del art. 32 de la Ley 40/2015.", "Art. 32 Ley 40/2015"),
-          q("El plazo para reclamar responsabilidad patrimonial es de:", ["1 año desde que se produjo el hecho o se manifestaron sus efectos", "3 meses", "5 años", "No tiene plazo"], 0, "Prescripción al año del hecho o de la manifestación del daño.", "Art. 67 Ley 39/2015"),
-        ],
-      },
-    ],
-  },
-  {
-    number: 3,
-    title: "Función pública y empleo público",
-    ministry: "INAP · Escuela de la Función Pública",
-    worldName: "Mundo 3 · Escuela de la Función Pública",
-    description: "Estatuto Básico del Empleado Público, clases de personal, derechos, deberes, acceso y carrera profesional.",
-    theme: "inap",
-    bossName: "Tribunal de Oposiciones",
-    bossIntro: "Silencio en la sala. Estudiante, el mérito y la capacidad son los únicos principios que aquí se evalúan.",
-    bossStyle: "judge",
-    topics: [
-      {
-        title: "Personal al servicio de las AAPP (TREBEP)",
-        summary: "Clases de personal, funcionarios de carrera e interinos, personal laboral y principios de acceso.",
-        npcName: "Elena Serrano",
-        npcRole: "Profesora del INAP",
-        npcLines: [
-          "El TREBEP (RDL 5/2015) aprueba el Texto Refundido del Estatuto Básico del Empleado Público.",
-          "Hay funcionarios de carrera, funcionarios interinos, personal laboral y personal eventual.",
-          "Los funcionarios de carrera se vinculan con la Administración por una relación estatutaria regulada por Derecho Administrativo.",
-        ],
-        tipName: "Luis",
-        tipRole: "Opositor de Gestión",
-        tipLines: [
-          "El acceso se rige por los principios de igualdad, mérito, capacidad y publicidad (art. 55 TREBEP).",
-        ],
-        boeIds: ["BOE-A-2015-11719"],
-        questions: [
-          q("¿Qué norma aprueba el Texto Refundido del Estatuto Básico del Empleado Público?", ["Ley 39/2015", "RDL 5/2015", "Ley 19/2013", "LO 3/2007"], 1, "Real Decreto Legislativo 5/2015.", "RDL 5/2015"),
-          q("¿Cuál es una clase de personal al servicio de las AAPP?", ["Becarios sin contrato", "Funcionarios de carrera", "Personal autónomo", "Consultores externos sin vinculación"], 1, "Funcionarios de carrera, interinos, personal laboral y eventual.", "Art. 8 TREBEP"),
-          q("El acceso a la función pública se rige por los principios de:", ["Igualdad, mérito, capacidad y publicidad", "Discrecionalidad y amiguismo", "Antigüedad", "Libre designación"], 0, "Principios constitucionales de acceso (art. 55 TREBEP).", "Art. 55 TREBEP"),
-          q("Los funcionarios interinos se nombran:", ["Para siempre, tras oposición", "Por razones de necesidad y urgencia para plazas vacantes o sustituciones", "Por elección popular", "Por sorteo"], 1, "Nombramiento temporal por necesidad y urgencia.", "Art. 10 TREBEP"),
-          q("El personal laboral se rige por:", ["Derecho administrativo exclusivamente", "La legislación laboral y el convenio colectivo aplicable, según el TREBEP", "Solo la Constitución", "El Código Civil"], 1, "Se rige por la legislación laboral, con las especialidades del TREBEP.", "Art. 11 TREBEP"),
-          q("¿Qué institución imparte formación para el acceso y carrera de los funcionarios de la AGE?", ["INAP (Instituto Nacional de Administración Pública)", "Agencia Tributaria", "CIS", "AEPD"], 0, "El INAP es el centro de formación de la Administración General del Estado.", "INAP"),
-        ],
-      },
-      {
-        title: "Derechos, deberes y código de conducta",
-        summary: "Derechos individuales, deberes, principios éticos, código de conducta y responsabilidades.",
-        npcName: "Rosa Lázaro",
-        npcRole: "Delegada de personal",
-        npcLines: [
-          "Los empleados públicos tienen derechos como la carrera profesional, la retribución, la jornada, los permisos y el respeto a su intimidad (art. 14 TREBEP).",
-          "Entre sus deberes está cumplir con diligencia las tareas asignadas y velar por los intereses generales (art. 52 TREBEP).",
-          "Los principios éticos incluyen objetividad, integridad, neutralidad, responsabilidad e imparcialidad (art. 53 TREBEP).",
-        ],
-        tipName: "Sara",
-        tipRole: "Opositora de Auxilio",
-        tipLines: [
-          "El código de conducta recoge conductas concretas que el empleado debe respetar (art. 54 TREBEP).",
-          "Puede exigirse responsabilidad disciplinaria, penal y civil o patrimonial, según el caso.",
-        ],
-        boeIds: ["BOE-A-2015-11719"],
-        questions: [
-          q("¿Cuál es un deber de los empleados públicos?", ["Cumplir órdenes sin valorar su legalidad", "Cumplir con diligencia las tareas asignadas y velar por los intereses generales", "Atender solo a sus amigos", "Ocultar la información pública"], 1, "Art. 52 TREBEP: deberes del empleado público.", "Art. 52 TREBEP"),
-          q("Los principios éticos del empleado público incluyen:", ["Objetividad, integridad, neutralidad e imparcialidad", "Lealtad al partido", "Arbitrariedad controlada", "Discrecionalidad total"], 0, "Art. 53 TREBEP.", "Art. 53 TREBEP"),
-          q("Los derechos de los funcionarios incluyen:", ["Carrera profesional, retribuciones, jornada y permisos", "Solo el sueldo", "Ninguno en vacaciones", "Ser despedido sin causa"], 0, "Art. 14 TREBEP: derechos individuales.", "Art. 14 TREBEP"),
-          q("Una situación administrativa de un funcionario es, por ejemplo:", ["Servicio activo", "Estar prohibido por ley", "Solo para interinos", "Equivalente al despido"], 0, "El servicio activo es una de las situaciones administrativas del TREBEP.", "TREBEP"),
-          q("¿Quién ostenta la potestad disciplinaria sobre los funcionarios?", ["El Parlamento", "La Administración, mediante procedimiento disciplinario regulado", "El ciudadano denunciante", "La Fiscalía de forma exclusiva"], 1, "La Administración ejerce la potestad disciplinaria con procedimiento reglado.", "TREBEP"),
-          q("Un principio ético que obliga a no favorecer a nadie por motivos personales es:", ["Imparcialidad", "Parcialidad", "Afinidad", "Sumisión"], 0, "La imparcialidad es un principio ético del empleado público.", "Art. 53 TREBEP"),
-        ],
-      },
-      {
-        title: "Acceso, carrera y procesos selectivos",
-        summary: "Sistemas selectivos, tribunales calificadores, grupos de clasificación y carrera profesional.",
-        npcName: "Miguel Ángel Prado",
-        npcRole: "Presidente de tribunal (simulado)",
-        npcLines: [
-          "El TREBEP prevé oposición, concurso y concurso-oposición como sistemas selectivos (art. 61).",
-          "Los órganos de selección o tribunales calificadores valoran los ejercicios y deben ser de composición especializada (art. 60).",
-          "Los funcionarios se clasifican en grupos: A1, A2, C1 y C2 según la titulación exigida (art. 76).",
-        ],
-        tipName: "Clara",
-        tipRole: "Opositora de Gestión",
-        tipLines: [
-          "La carrera profesional puede ser horizontal o vertical (art. 16 TREBEP).",
-          "Requisitos generales de acceso: nacionalidad, edad y capacidad funcional, entre otros (art. 56).",
-        ],
-        boeIds: ["BOE-A-2015-11719"],
-        questions: [
-          q("¿Qué sistemas selectivos prevé el TREBEP?", ["Oposición, concurso y concurso-oposición", "Sorteo", "Designación libre", "Solo entrevista"], 0, "Art. 61 TREBEP.", "Art. 61 TREBEP"),
-          q("¿Qué órgano valora los ejercicios de un proceso selectivo?", ["Órgano de selección o tribunal calificador", "El Consejo de Ministros", "Un notario", "El Congreso"], 0, "Art. 60 TREBEP: órganos de selección.", "Art. 60 TREBEP"),
-          q("La carrera profesional de los funcionarios se estructura en:", ["Carrera horizontal y carrera vertical", "Solo grados", "Solo trienios", "Carrera militar"], 0, "Art. 16 TREBEP.", "Art. 16 TREBEP"),
-          q("Para acceder a empleo público se exigen, entre otros requisitos:", ["Nacionalidad, edad y capacidad funcional", "Ser cargo político", "Pertenecer a un partido", "Tener 60 años"], 0, "Art. 56 TREBEP: requisitos generales.", "Art. 56 TREBEP"),
-          q("Los grupos de clasificación profesional de los funcionarios son:", ["A1, A2, C1 y C2", "1, 2 y 3", "I, II y III", "Solo A y B"], 0, "Art. 76 TREBEP: grupos de clasificación.", "Art. 76 TREBEP"),
-          q("Si un aspirante no supera un ejercicio de la oposición:", ["Puede seguir en el proceso", "Queda eliminado del proceso selectivo", "Pasa automáticamente a la siguiente fase", "Se le da otra oportunidad automática"], 1, "La no superación de un ejercicio de carácter eliminatorio supone la eliminación.", "Bases de la convocatoria"),
-        ],
-      },
-    ],
-  },
-  {
-    number: 4,
-    title: "Hacienda pública y contratación",
-    ministry: "Ministerio de Hacienda · Torre de la Hacienda",
-    worldName: "Mundo 4 · Torre de Hacienda",
-    description: "Presupuestos Generales del Estado, Ley General Presupuestaria, subvenciones, contratación pública y tributos.",
-    theme: "hacienda",
-    bossName: "Inspector Tributario",
-    bossIntro: "Todo se paga, todo se justifica. ¿Sabes cuánto dura la prescripción tributaria o cómo se aprueba un presupuesto?",
-    bossStyle: "inspector",
-    topics: [
-      {
-        title: "Presupuestos y Ley General Presupuestaria",
-        summary: "Carácter anual, aprobación por Cortes, prórroga y control del gasto público.",
-        npcName: "Gregorio Lamas",
-        npcRole: "Interventor General",
-        npcLines: [
-          "Los Presupuestos Generales del Estado tienen carácter anual y su aprobación corresponde a las Cortes (art. 134 CE).",
-          "La Ley General Presupuestaria (Ley 47/2003) regula el régimen presupuestario, la contabilidad y el control del sector público estatal.",
-          "El Tribunal de Cuentas fiscaliza la gestión económico-financiera del sector público (art. 136 CE).",
-        ],
-        tipName: "Luisa",
-        tipRole: "Analista presupuestaria",
-        tipLines: [
-          "Si no se aprueban los presupuestos al inicio del ejercicio, se prorrogan los del año anterior (art. 134.4 CE).",
-        ],
-        boeIds: ["BOE-A-2003-21614"],
-        questions: [
-          q("Los Presupuestos Generales del Estado tienen carácter:", ["Plurianual", "Anual", "Bienal", "Permanente"], 1, "Art. 134.2 CE: carácter anual.", "Art. 134.2 CE"),
-          q("Si no se aprueban los presupuestos al inicio del ejercicio, se:", ["Suspenden los servicios públicos", "Prorrogan los del ejercicio anterior", "Aplican los del año siguiente", "Los decide el Presidente"], 1, "Art. 134.4 CE: prórroga presupuestaria.", "Art. 134.4 CE"),
-          q("¿Qué principio presupuestario impide destinar un crédito a fines distintos de los previstos?", ["Especialidad", "Universalidad", "Unidad de caja", "Estabilidad"], 0, "Principio de especialidad cuantitativa y cualitativa.", "Ley 47/2003"),
-          q("¿Qué órgano fiscaliza la gestión económico-financiera del sector público?", ["Tribunal de Cuentas", "Tribunal Constitucional", "Consejo de Estado", "Defensor del Pueblo"], 0, "Art. 136 CE.", "Art. 136 CE"),
-          q("El ciclo presupuestario comprende:", ["Elaboración, aprobación, ejecución y control", "Solo la aprobación", "Solo la contabilidad", "Solo la ejecución del gasto"], 0, "Fases del ciclo presupuestario.", "Ley 47/2003"),
-          q("¿Quién elabora y remite a las Cortes el proyecto de Presupuestos Generales del Estado?", ["El Gobierno", "El Tribunal de Cuentas", "La Agencia Tributaria", "El Senado"], 0, "El Gobierno elabora el proyecto y lo presenta a las Cortes.", "Art. 134 CE"),
-        ],
-      },
-      {
-        title: "Subvenciones y contratación pública",
-        summary: "Concurrencia competitiva, procedimientos de licitación, contratos menores y control de subvenciones.",
-        npcName: "Pilar Gómez",
-        npcRole: "Jefa de Contratación",
-        npcLines: [
-          "La LCSP (Ley 9/2017) regula la contratación del sector público y busca la eficiencia y la libre concurrencia.",
-          "Procedimientos de adjudicación: abierto, restringido, negociado, diálogo competitivo y asociación para la innovación.",
-          "El contrato menor tiene tramitación simplificada, por debajo de umbrales (art. 118 LCSP).",
-        ],
-        tipName: "Adrián",
-        tipRole: "Becario de subvenciones",
-        tipLines: [
-          "Las subvenciones se rigen por la Ley 38/2003, General de Subvenciones.",
-          "Como regla general, la concesión de subvenciones se realiza mediante concurrencia competitiva.",
-        ],
-        boeIds: ["BOE-A-2017-12902"],
-        questions: [
-          q("¿Qué ley regula la contratación del sector público?", ["Ley 9/2017 (LCSP)", "Ley 58/2003", "Ley 38/2003", "Ley 47/2003"], 0, "La LCSP es la Ley 9/2017.", "Ley 9/2017"),
-          q("Como regla general, la concesión de subvenciones se realiza mediante:", ["Concurrencia competitiva", "Adjudicación directa siempre", "Sorteo", "Decisión discrecional sin criterios"], 0, "Procedimiento general de concurrencia competitiva.", "Art. 22 Ley 38/2003"),
-          q("Un procedimiento de contratación en el que cualquier empresa interesada puede presentar oferta es:", ["Abierto", "Negociado sin publicidad", "Menor", "Restringido"], 0, "El procedimiento abierto permite la presentación de ofertas por cualquier interesado.", "LCSP"),
-          q("El contrato menor se caracteriza por:", ["Importe inferior a los umbrales de la LCSP y tramitación simplificada", "Ser siempre plurianual", "Requerir publicación en el DOUE", "Superar 1 millón de euros"], 0, "Contratos menores: umbrales económicos y tramitación simplificada.", "Art. 118 LCSP"),
-          q("La Ley General de Subvenciones es:", ["Ley 38/2003", "Ley 9/2017", "RDL 5/2015", "Ley 39/2015"], 0, "Ley 38/2003, General de Subvenciones.", "Ley 38/2003"),
-          q("El beneficiario de una subvención debe:", ["Cumplir la finalidad y justificar la aplicación de los fondos", "No justificar nada", "Pagar un canon anual", "Devolverla en 24 horas"], 0, "Obligaciones del beneficiario: cumplir la finalidad y justificar.", "Ley 38/2003"),
-        ],
-      },
-      {
-        title: "Tributos y Ley General Tributaria",
-        summary: "Principios tributarios, tipos de tributos, prescripción y los impuestos principales.",
-        npcName: "Vicente Montes",
-        npcRole: "Inspector de Hacienda",
-        npcLines: [
-          "La Ley 58/2003, General Tributaria, regula la aplicación de los tributos y sus principios generales.",
-          "Los tributos son tasas, impuestos y contribuciones especiales (art. 2 LGT).",
-          "El plazo general de prescripción de los derechos tributarios es de cuatro años (art. 66 LGT).",
-        ],
-        tipName: "Nerea",
-        tipRole: "Asesora fiscal",
-        tipLines: [
-          "El sistema tributario se inspira en los principios de capacidad económica, igualdad, progresividad y no confiscatoriedad (art. 31 CE).",
-        ],
-        boeIds: ["BOE-A-2003-23186"],
-        questions: [
-          q("¿Qué ley regula los principios generales de aplicación de los tributos?", ["Ley 58/2003, General Tributaria", "Ley 9/2017", "Ley 40/2015", "Ley 19/2013"], 0, "Ley 58/2003, LGT.", "Ley 58/2003"),
-          q("¿Cuál es el plazo general de prescripción de los derechos tributarios?", ["1 año", "4 años", "10 años", "Imprescriptible"], 1, "Art. 66 LGT: cuatro años.", "Art. 66 LGT"),
-          q("Según el art. 31 CE, el sistema tributario se inspira en:", ["Capacidad económica, igualdad, progresividad y no confiscatoriedad", "Partidismo", "Redistribución por sorteo", "Recaudación máxima"], 0, "Art. 31.1 CE.", "Art. 31.1 CE"),
-          q("Las tasas son tributos que se exigen por:", ["Utilización del dominio público o prestación de servicios públicos", "Ingresos de una empresa privada", "Herencias", "Rentas de capital"], 0, "Art. 2 LGT: tasas por servicios o uso del dominio público.", "Art. 2 LGT"),
-          q("El IRPF es un:", ["Impuesto directo sobre la renta personal", "Impuesto indirecto sobre el consumo", "Tasa municipal", "Contribución especial"], 0, "El IRPF grava la renta de las personas físicas (impuesto directo).", "Ley 35/2006"),
-          q("El IVA es un:", ["Impuesto directo sobre el patrimonio", "Impuesto indirecto sobre el consumo", "Tasa local", "Multa"], 1, "El IVA grava el consumo: es un impuesto indirecto.", "Ley 37/1992"),
-        ],
-      },
-    ],
-  },
-  {
-    number: 5,
-    title: "Administración digital, transparencia e igualdad",
-    ministry: "Ministerio para la Transformación Digital",
-    worldName: "Mundo 5 · Ciudad Digital",
-    description: "Administración electrónica, Esquema Nacional de Seguridad, transparencia, protección de datos e igualdad efectiva.",
-    theme: "digital",
-    bossName: "Señor Ciberpapeleo",
-    bossIntro: "¡Todo digital, todo en la nube, nada en papel! Veamos si dominas los registros, la transparencia y los datos.",
+    title: "Unión Europea",
+    ministry: "Comisión Europea y Consejo de la Unión Europea",
+    worldName: "Mundo 2 · Bruselas y las Instituciones Comunitarias",
+    description: "Tratados de la UE, Instituciones (Consejo, Comisión, Parlamento, TJUE), Fuentes del Derecho Europeo, Presupuesto y Fondos.",
+    theme: "europa",
+    bossName: "El Comisario Europeo",
+    bossIntro: "¡El Derecho de la Unión tiene efecto directo y primacía sobre el derecho nacional! ¡Veamos si conoces el TFUE!",
     bossStyle: "cyber",
     topics: [
       {
-        title: "Administración electrónica y registros",
-        summary: "Registros electrónicos, Esquema Nacional de Seguridad, interoperabilidad y firma electrónica.",
-        npcName: "Óscar Mena",
-        npcRole: "Técnico de Administración Electrónica",
+        title: "Tratados y Proceso de Construcción Europea",
+        summary: "De Roma a Lisboa, personalidad jurídica de la UE, valores y adhesión (art. 49 TUE).",
+        npcName: "Monique Dupont",
+        npcRole: "Consejera Jurídica en Bruselas",
         npcLines: [
-          "La Administración electrónica se regula, sobre todo, en las leyes 39/2015 y 40/2015.",
-          "El Esquema Nacional de Seguridad (RD 311/2022) fija los requisitos de seguridad de los sistemas electrónicos de las AAPP.",
-          "El Reglamento eIDAS (UE) 910/2014 regula la identificación y la firma electrónica en la Unión Europea.",
+          "El Tratado de Lisboa dotó a la Unión Europea de personalidad jurídica única.",
+          "La Unión se fundamenta en el Tratado de la Unión Europea (TUE) y el Tratado de Funcionamiento de la Unión Europea (TFUE).",
+          "El artículo 5 TUE consagra los principios de atribución, subsidiariedad y proporcionalidad.",
         ],
-        tipName: "Carla",
-        tipRole: "Desarrolladora",
+        tipName: "Lucas",
+        tipRole: "Preparador de Derecho UE",
         tipLines: [
-          "El Esquema Nacional de Interoperabilidad (Real Decreto 4/2010) regula el intercambio de datos entre Administraciones.",
-          "Los registros electrónicos deben estar disponibles de forma permanente (art. 16 Ley 39/2015).",
+          "El principio de subsidiariedad rige en los ámbitos que no sean de competencia exclusiva de la Unión.",
         ],
-        boeIds: ["BOE-A-2015-10565", "BOE-A-2022-7191"],
+        boeIds: ["BOE-A-2015-10565"],
         questions: [
-          q("¿Qué esquema regula los requisitos de seguridad de los sistemas electrónicos de las AAPP?", ["ENS (Esquema Nacional de Seguridad)", "ENI solamente", "Cl@ve", "RGPD"], 0, "Real Decreto 311/2022 (ENS).", "RD 311/2022"),
-          q("El reglamento europeo sobre identificación y firma electrónica es:", ["eIDAS (Reglamento UE 910/2014)", "RGPD", "DSA", "AI Act"], 0, "Reglamento (UE) 910/2014, eIDAS.", "Reglamento eIDAS"),
-          q("Las AAPP deben facilitar la presentación de documentos mediante:", ["Registro electrónico general", "Solo papel", "Fax", "Correo postal únicamente"], 0, "Art. 16 Ley 39/2015: registros electrónicos.", "Art. 16 Ley 39/2015"),
-          q("¿Qué esquema regula la interoperabilidad entre Administraciones?", ["ENI (Esquema Nacional de Interoperabilidad)", "ENS", "RGPD", "LOPDGDD"], 0, "Real Decreto 4/2010: ENI.", "RD 4/2010"),
-          q("Los documentos administrativos electrónicos deben garantizar:", ["Autenticidad, integridad y conservación", "Solo la fecha", "Firma manuscrita escaneada siempre", "Ningún requisito"], 0, "Garantías de autenticidad, integridad y conservación.", "Ley 39/2015"),
-          q("La copia auténtica de un documento tiene:", ["Igual valor que el original", "Valor de simple copia", "Valor nulo", "Solo valor informativo"], 0, "La copia auténtica tiene la misma validez que el original.", "Ley 39/2015"),
+          q(
+            "El principio en virtud del cual la Unión actúa solo dentro de los límites de las competencias que le atribuyen los Estados miembros se denomina:",
+            ["Principio de subsidiariedad", "Principio de atribución", "Principio de proporcionalidad", "Principio de cooperación leal"],
+            1,
+            "El art. 5.2 TUE define el principio de atribución.",
+            "Tratado de la Unión Europea",
+            "Artículo 5.2 TUE",
+            "«En virtud del principio de atribución, la Unión actúa exclusivamente dentro de los límites de las competencias que le han atribuido los Estados miembros en los Tratados para lograr los objetivos que éstos determinan.»"
+          ),
+          q(
+            "¿Qué Tratado suprimió formalmente la estructura de pilares de Maastricht y dotó de personalidad jurídica única a la UE?",
+            ["Tratado de Ámsterdam", "Tratado de Niza", "Tratado de Lisboa", "Tratado de Roma"],
+            2,
+            "El Tratado de Lisboa (en vigor el 1 de diciembre de 2009) otorgó personalidad jurídica única.",
+            "Tratado de Lisboa",
+            "Artículo 47 TUE",
+            "«La Unión tiene personalidad jurídica.»"
+          ),
         ],
       },
       {
-        title: "Transparencia y acceso a la información",
-        summary: "Publicidad activa, derecho de acceso, límites, plazos y buen gobierno.",
-        npcName: "Jaime Ferrer",
-        npcRole: "Responsable de Transparencia",
+        title: "Instituciones de la Unión Europea",
+        summary: "Consejo Europeo, Consejo de la UE, Comisión Europea, Parlamento Europeo y Tribunal de Justicia (TJUE).",
+        npcName: "Hans Weber",
+        npcRole: "Administrador del Consejo Europeo",
         npcLines: [
-          "La Ley 19/2013 regula la publicidad activa, el derecho de acceso a la información pública y el buen gobierno.",
-          "La Administración debe resolver las solicitudes de acceso en un mes, ampliable en otro mes (art. 20).",
-          "El Consejo de Transparencia y Buen Gobierno es el órgano de control de la transparencia en la AGE.",
+          "El Consejo Europeo define las orientaciones y prioridades políticas generales, pero no ejerce función legislativa (art. 15 TUE).",
+          "La Comisión Europea ostenta el monopolio casi exclusivo de la iniciativa legislativa y vela por los Tratados.",
+          "El TJUE garantiza el respeto del Derecho en la interpretación y aplicación de los Tratados.",
         ],
-        tipName: "Lorena",
-        tipRole: "Opositora de Igualdad",
+        tipName: "Sara",
+        tipRole: "Especialista en Fondos Europeos",
         tipLines: [
-          "Límites al acceso: seguridad nacional, defensa, intimidad y protección de datos (arts. 14 y 15).",
+          "Recuerda la mayoría cualificada en el Consejo: 55% de los Estados miembros que representen al menos el 65% de la población de la UE.",
         ],
-        boeIds: ["BOE-A-2013-12887"],
+        boeIds: [],
         questions: [
-          q("El plazo para resolver una solicitud de acceso a la información es de:", ["15 días hábiles", "1 mes, ampliable en otro mes", "3 meses", "6 meses"], 1, "Art. 20 Ley 19/2013.", "Art. 20 Ley 19/2013"),
-          q("Un límite al derecho de acceso es:", ["La seguridad nacional", "Solicitar información sin motivo", "El tamaño del archivo", "La lengua del solicitante"], 0, "Art. 14 Ley 19/2013: límites.", "Art. 14 Ley 19/2013"),
-          q("El órgano estatal de control en materia de transparencia es:", ["Consejo de Transparencia y Buen Gobierno", "Tribunal de Cuentas", "Defensor del Menor", "INE"], 0, "CTBG, órgano de control.", "Ley 19/2013"),
-          q("La publicidad activa obliga a:", ["Publicar de oficio información institucional, organizativa, de planificación y económica", "Solo responder a peticiones", "No publicar nada", "Publicar solo en inglés"], 0, "Art. 5 Ley 19/2013: publicidad activa.", "Art. 5 Ley 19/2013"),
-          q("El derecho de acceso se ejerce:", ["Sin necesidad de motivar la solicitud", "Solo por abogados", "Mediante carta notarial", "Previo pago de una tasa obligatoria"], 0, "Art. 17.3 Ley 19/2013: no es necesario motivar la solicitud (con excepciones).", "Art. 17 Ley 19/2013"),
-          q("Los principios de buen gobierno aplican a:", ["Los altos cargos y responsables públicos", "Solo a los ciudadanos", "Nadie", "Solo a las empresas privadas"], 0, "Título II Ley 19/2013: buen gobierno de altos cargos.", "Título II Ley 19/2013"),
+          q(
+            "¿Cuál de las siguientes instituciones de la UE NO ejerce funciones legislativas?",
+            ["El Parlamento Europeo", "El Consejo de la Unión Europea", "El Consejo Europeo", "La Comisión Europea"],
+            2,
+            "El artículo 15.1 TUE prohíbe expresamente que el Consejo Europeo ejerza función legislativa.",
+            "Tratado de la Unión Europea",
+            "Artículo 15.1 TUE",
+            "«El Consejo Europeo dará a la Unión los impulsos necesarios para su desarrollo y definirá sus orientaciones y prioridades políticas generales. No ejercerá función legislativa alguna.»"
+          ),
+          q(
+            "El Tribunal de Justicia de la Unión Europea (TJUE) tiene su sede en:",
+            ["Bruselas", "Estrasburgo", "Luxemburgo", "La Haya"],
+            2,
+            "La sede oficial del TJUE y del Tribunal General está establecida en Luxemburgo.",
+            "Protocolo sobre las sedes de las instituciones",
+            "Protocolo n.º 6 anexo a los Tratados",
+            "«El Tribunal de Justicia de la Unión Europea tendrá su sede en Luxemburgo.»"
+          ),
         ],
       },
       {
-        title: "Protección de datos e igualdad efectiva",
-        summary: "RGPD, LOPDGDD, brechas de seguridad, derechos de los interesados y LO 3/2007.",
-        npcName: "Amparo Ruiz",
-        npcRole: "Delegada de Protección de Datos",
+        title: "Fuentes del Derecho UE y Presupuesto Comunitario",
+        summary: "Reglamentos, directivas, decisiones, efecto directo, primacía y Marco Financiero Plurianual (MFP).",
+        npcName: "Laura Benítez",
+        npcRole: "Letrada experta en Derecho Comunitario",
         npcLines: [
-          "El RGPD (Reglamento UE 2016/679) y la LO 3/2018 (LOPDGDD) regulan el tratamiento de datos personales.",
-          "Las Administraciones públicas deben designar un Delegado de Protección de Datos (art. 37 RGPD).",
-          "Las brechas de seguridad deben notificarse a la autoridad de control en un plazo de 72 horas (art. 33 RGPD).",
+          "El Reglamento tiene alcance general, es obligatorio en todos sus elementos y directamente aplicable en cada Estado miembro.",
+          "La Directiva obliga al Estado miembro en cuanto al resultado, dejando a las autoridades nacionales la forma y medios (transposición).",
+          "El principio de primacía fue proclamado por el TJUE en la célebre sentencia Costa c. ENEL (1964).",
         ],
         tipName: "Álvaro",
-        tipRole: "Técnico de igualdad",
+        tipRole: "Gestor del PRTR",
         tipLines: [
-          "La LO 3/2007 tiene por objeto hacer efectiva la igualdad entre mujeres y hombres.",
-          "El principio de igualdad y no discriminación está en el art. 14 CE.",
+          "Las Decisiones son obligatorias en todos sus elementos: si designan destinatarios, solo son obligatorias para éstos.",
         ],
-        boeIds: ["BOE-A-2018-16673", "BOE-A-2007-6115"],
+        boeIds: [],
         questions: [
-          q("El plazo para notificar una brecha de seguridad a la autoridad de control es de:", ["24 horas", "72 horas", "7 días", "1 mes"], 1, "Art. 33 RGPD: 72 horas.", "Art. 33 RGPD"),
-          q("El RGPD es un reglamento de la UE que se aplica:", ["Directamente en todos los Estados miembros", "Solo si lo aprueba la CCAA", "Solo al sector privado", "Como directiva"], 0, "Los reglamentos europeos son directamente aplicables.", "RGPD"),
-          q("¿Cuál es el plazo para responder a un ejercicio de derechos (acceso, rectificación…) según el RGPD?", ["1 mes (prorrogable en 2 meses si es complejo)", "1 año", "24 horas", "No tiene plazo"], 0, "Art. 12.3 RGPD.", "Art. 12.3 RGPD"),
-          q("La LO 3/2007 tiene por objeto:", ["Hacer efectiva la igualdad entre mujeres y hombres", "Regular el IVA", "Regular la caza", "Regular las carreteras"], 0, "Art. 1 LO 3/2007.", "LO 3/2007"),
-          q("La LOPDGDD fue aprobada por:", ["Ley Orgánica 3/2018", "Ley 9/2017", "RD 4/2010", "Ley 58/2003"], 0, "LO 3/2018, de Protección de Datos Personales y garantía de los derechos digitales.", "LO 3/2018"),
-          q("¿Qué autoridad supervisa la aplicación del RGPD en España?", ["Agencia Española de Protección de Datos (AEPD)", "Agencia Tributaria", "Tribunal de Cuentas", "Consejo de Estado"], 0, "La AEPD es la autoridad de control en España.", "LOPDGDD"),
+          q(
+            "El acto legislativo europeo que tiene alcance general, es obligatorio en todos sus elementos y directamente aplicable es:",
+            ["La Directiva", "El Reglamento", "La Decisión", "El Dictamen"],
+            1,
+            "El artículo 288 del TFUE define el Reglamento con eficacia directa e inmediata.",
+            "Tratado de Funcionamiento de la UE",
+            "Artículo 288 TFUE",
+            "«El reglamento tendrá un alcance general. Será obligatorio en todos sus elementos y directamente aplicable en cada Estado miembro.»"
+          ),
+          q(
+            "Una Directiva europea se caracteriza por:",
+            ["Ser directamente aplicable sin necesidad de norma interna", "Obligar al Estado en cuanto al resultado, requiriendo transposición nacional", "Carecer de valor vinculante alguno", "Aplicarse únicamente a los particulares"],
+            1,
+            "El art. 288 párrafo 3 TFUE establece la obligación de resultado de las directivas.",
+            "Tratado de Funcionamiento de la UE",
+            "Artículo 288 TFUE",
+            "«La directiva obligará al Estado miembro destinatario en cuanto al resultado que deba conseguirse, dejando, sin embargo, a las autoridades nacionales la elección de la forma y de los medios.»"
+          ),
         ],
       },
     ],
   },
+
+  // =========================================================================
+  // BLOQUE III: POLÍTICAS PÚBLICAS
+  // =========================================================================
   {
-    number: 6,
-    title: "Unión Europea y Administración local",
-    ministry: "Unión Europea · Bruselas y Estrasburgo",
-    worldName: "Mundo 6 · Bruselas",
-    description: "Instituciones y fuentes del Derecho de la UE, y régimen local y autonómico.",
-    theme: "europa",
-    bossName: "Comisario de Bruselas",
-    bossIntro: "Veintisiete países, un solo mercado y un montón de normas. ¿Sabes quién propone las leyes europeas?",
-    bossStyle: "stars",
+    number: 3,
+    title: "Políticas Públicas",
+    ministry: "Ministerio de la Presidencia, Justicia y Relaciones con las Cortes",
+    worldName: "Mundo 3 · Moncloa y Transformación Pública",
+    description: "Ciclo de políticas, Gobierno Abierto, Transparencia (Ley 19/2013), Administración Digital, Protección de Datos, Igualdad y Agenda 2030.",
+    theme: "ministerio",
+    bossName: "Directora de Políticas Públicas",
+    bossIntro: "¡Una política pública que no se evalúa es una política ciega! ¡Demuestra que conoces la Ley 19/2013 y las políticas de Igualdad!",
+    bossStyle: "stamp",
     topics: [
       {
-        title: "Instituciones de la Unión Europea",
-        summary: "Parlamento, Consejo, Consejo Europeo, Comisión, TJUE y BCE.",
-        npcName: "Helena Ibáñez",
-        npcRole: "Funcionaria del Parlamento Europeo",
+        title: "Ciclo de las Políticas Públicas y Gobierno Abierto",
+        summary: "Formulación, diseño, implementación y evaluación. Participación ciudadana y rendición de cuentas.",
+        npcName: "Clara Méndez",
+        npcRole: "Analista de Políticas Públicas de la AGE",
         npcLines: [
-          "Las instituciones de la UE son el Parlamento Europeo, el Consejo Europeo, el Consejo, la Comisión, el TJUE, el BCE y el Tribunal de Cuentas (art. 13 TUE).",
-          "El Parlamento Europeo es elegido por sufragio universal directo cada cinco años.",
-          "La Comisión tiene, con carácter general, la iniciativa legislativa.",
+          "El ciclo de las políticas consta de: definición del problema, inclusión en agenda, formulación, implementación y evaluación.",
+          "El Gobierno Abierto descansa sobre tres pilares: transparencia, participación y colaboración.",
+          "España forma parte de la Alianza para el Gobierno Abierto (OGP) desde 2011.",
         ],
-        tipName: "Mateo",
-        tipRole: "Becario en Bruselas",
+        tipName: "David",
+        tipRole: "Evaluador de Políticas en el INAP",
         tipLines: [
-          "El Consejo Europeo define las orientaciones políticas generales y no ejerce función legislativa (art. 15 TUE).",
+          "No confundas eficacia (logro de objetivos) con eficiencia (relación coste-beneficio o recursos empleados).",
         ],
-        boeIds: [],
+        boeIds: ["BOE-A-2013-12887"],
         questions: [
-          q("¿Qué institución ostenta, con carácter general, la iniciativa legislativa en la UE?", ["Comisión Europea", "Parlamento Europeo", "Consejo Europeo", "TJUE"], 0, "La Comisión tiene la iniciativa legislativa ordinaria.", "Art. 17 TUE"),
-          q("El Parlamento Europeo se elige cada:", ["4 años", "5 años", "6 años", "7 años"], 1, "Elecciones cada cinco años.", "Art. 14 TUE"),
-          q("¿Cuál es el órgano judicial de la Unión Europea?", ["Tribunal de Justicia de la UE (TJUE)", "Tribunal Supremo", "Tribunal de Cuentas", "Tribunal Europeo de Derechos Humanos"], 0, "El TJUE garantiza la interpretación uniforme del Derecho de la UE.", "Art. 19 TUE"),
-          q("¿Qué institución gestiona la política monetaria del euro?", ["Banco Central Europeo (BCE)", "Consejo de Europa", "Comisión Europea", "Parlamento Europeo"], 0, "El BCE gestiona la política monetaria de la zona euro.", "Art. 282 TFUE"),
-          q("El Consejo Europeo está formado por:", ["Jefes de Estado o de Gobierno de los Estados miembros y su Presidente", "Diputados europeos", "Comisarios", "Juristas"], 0, "Art. 15 TUE.", "Art. 15 TUE"),
-          q("Las instituciones de la UE se enumeran en:", ["Art. 13 TUE", "Art. 1 CE", "Art. 9 CE", "Art. 1 RGPD"], 0, "Art. 13 TUE.", "Art. 13 TUE"),
+          q(
+            "¿Cuáles son los tres pilares fundamentales sobre los que se asienta el modelo de Gobierno Abierto?",
+            ["Jerarquía, obediencia y discrecionalidad", "Transparencia, participación ciudadana y colaboración", "Privacidad, secreto y celeridad", "Fiscalización, sanción y recaudación"],
+            1,
+            "El Gobierno Abierto promueve la transparencia, la participación activa y la colaboración intersectorial.",
+            "Alianza para el Gobierno Abierto",
+            "Declaración de Gobierno Abierto",
+            "«Nos comprometemos a aumentar la disponibilidad de información, apoyar la participación ciudadana y aplicar los más altos estándares de integridad profesional en nuestras administraciones.»"
+          ),
+          q(
+            "En la evaluación de políticas públicas, la relación entre los resultados alcanzados y los recursos utilizados mide la:",
+            ["Eficacia", "Eficiencia", "Equidad", "Legalidad"],
+            1,
+            "La eficiencia compara el resultado obtenido con el consumo de recursos públicos.",
+            "Principios de Buena Gestión",
+            "Art. 3.1 Ley 40/2015",
+            "«Las Administraciones Públicas deberán respetar en su actuación los principios de eficacia, economía y eficiencia en la asignación y utilización de los recursos públicos.»"
+          ),
         ],
       },
       {
-        title: "Fuentes del Derecho de la Unión Europea",
-        summary: "Derecho originario y derivado: reglamentos, directivas, decisiones y recomendaciones.",
-        npcName: "Jan Van Dijk",
-        npcRole: "Abogado de asuntos europeos",
+        title: "Transparencia y Administración Digital",
+        summary: "Ley 19/2013 de Transparencia, publicidad activa, derecho de acceso, España Digital y ENS (RD 311/2022).",
+        npcName: "Ignacio Soto",
+        npcRole: "Consejero del Consejo de Transparencia y Buen Gobierno",
         npcLines: [
-          "El Derecho originario lo forman los Tratados (TUE y TFUE) y la Carta de los Derechos Fundamentales de la UE.",
-          "Los reglamentos son obligatorios y directamente aplicables en todos los Estados miembros.",
-          "Las directivas obligan en cuanto al resultado y deben transponerse por los Estados dentro del plazo fijado.",
+          "La Ley 19/2013 regula la publicidad activa en el Portal de Transparencia y el derecho de acceso a la información pública.",
+          "El plazo general para resolver las solicitudes de acceso a la información es de 1 mes (art. 20.1).",
+          "El silencio administrativo en solicitudes de información de la Ley 19/2013 tiene sentido desestimatorio.",
         ],
-        tipName: "Irene",
-        tipRole: "Experta en transposición",
+        tipName: "Marina",
+        tipRole: "Delegada de Protección de Datos",
         tipLines: [
-          "Las decisiones obligan a sus destinatarios concretos; las recomendaciones y dictámenes no son vinculantes.",
+          "Contra la resolución expresa o presunta de acceso cabe reclamación potestativa ante el Consejo de Transparencia previa a la vía contenciosa.",
         ],
-        boeIds: [],
+        boeIds: ["BOE-A-2013-12887", "BOE-A-2018-16673", "BOE-A-2022-7191"],
         questions: [
-          q("Un reglamento de la UE:", ["Requiere transposición obligatoria", "Es obligatorio y directamente aplicable en todos los Estados", "Solo obliga a los Estados que lo voten", "Es una recomendación"], 1, "Art. 288 TFUE: alcance general y obligatorio.", "Art. 288 TFUE"),
-          q("Una directiva se caracteriza por:", ["Obligar en cuanto al resultado, con transposición en plazo", "Ser siempre directamente aplicable", "No vincular a los Estados", "Ser un acuerdo internacional sin efectos"], 0, "Art. 288 TFUE: obligatoria en cuanto al resultado.", "Art. 288 TFUE"),
-          q("¿Qué tipo de norma es una decisión de la UE?", ["Obligatoria para sus destinatarios", "Recomendación sin fuerza", "Tratado internacional", "Norma nacional"], 0, "Art. 288 TFUE.", "Art. 288 TFUE"),
-          q("Los Tratados constitutivos forman parte del Derecho:", ["Originario", "Derivado", "Consuetudinario nacional", "Penal"], 0, "Derecho originario de la UE.", "TUE y TFUE"),
-          q("En la jerarquía básica del Derecho de la UE, en primer lugar se sitúan:", ["Los Tratados", "Las directivas", "Los reglamentos", "La jurisprudencia nacional"], 0, "Los Tratados son la norma primaria de la UE.", "TUE y TFUE"),
-          q("Las recomendaciones de la UE:", ["No son vinculantes", "Son obligatorias", "Son reglamentos", "Son sanciones"], 0, "Art. 288 TFUE: las recomendaciones no son vinculantes.", "Art. 288 TFUE"),
+          q(
+            "Según la Ley 19/2013 de Transparencia, la resolución de una solicitud de acceso a la información debe notificarse en el plazo máximo de:",
+            ["10 días hábiles", "Un mes desde la recepción de la solicitud por el órgano competente", "Tres meses", "Quince días prorrogables por otros quince"],
+            1,
+            "El artículo 20.1 de la Ley 19/2013 fija el plazo general de un mes.",
+            "Ley 19/2013 de Transparencia",
+            "Artículo 20.1 Ley 19/2013",
+            "«La resolución en la que se conceda o deniegue el acceso deberá notificarse al solicitante y a los terceros afectados que así lo hayan solicitado en el plazo máximo de un mes desde la recepción de la solicitud por el órgano competente para resolver.»"
+          ),
+          q(
+            "Transcurrido el plazo máximo para resolver una solicitud de acceso a la información pública sin notificación expresa, se entenderá:",
+            ["Estimada por silencio positivo", "Desestimada por silencio negativo", "Caducado el procedimiento", "Suspendido el plazo"],
+            1,
+            "El artículo 20.4 de la Ley 19/2013 establece expresamente el silencio desestimatorio.",
+            "Ley 19/2013 de Transparencia",
+            "Artículo 20.4 Ley 19/2013",
+            "«Transcurrido el plazo máximo para resolver sin que se haya dictado y notificado resolución expresa se entenderá que la solicitud ha sido desestimada.»"
+          ),
         ],
       },
       {
-        title: "Administración local y autonómica",
-        summary: "Bases del régimen local, órganos municipales, Diputaciones y Estatutos de Autonomía.",
-        npcName: "Teresa Gil",
-        npcRole: "Secretaria municipal",
+        title: "Igualdad Efectiva, Violencia de Género y Agenda 2030",
+        summary: "LO 3/2007 para la igualdad efectiva, LO 1/2004 contra la violencia de género y los 17 Objetivos de Desarrollo Sostenible (ODS).",
+        npcName: "Patricia Rivas",
+        npcRole: "Vocal Asesora de Políticas de Igualdad",
         npcLines: [
-          "La Ley 7/1985 (LBRL) regula las bases del régimen local: municipios, provincias e islas.",
-          "Órganos necesarios del municipio: el alcalde, el pleno y, en su caso, la junta de gobierno local.",
-          "La Secretaría municipal es un puesto de habilitación de carácter nacional.",
+          "El principio de transversalidad de género (mainstreaming) obliga a todos los poderes públicos.",
+          "Las empresas de 50 o más trabajadores están obligadas a elaborar y aplicar un Plan de Igualdad.",
+          "La Agenda 2030 aprobada por la ONU en 2015 contiene 17 ODS y 169 metas universales.",
         ],
-        tipName: "Gonzalo",
-        tipRole: "Técnico de Comunidad Autónoma",
+        tipName: "Carlos",
+        tipRole: "Coordinador de Sostenibilidad",
         tipLines: [
-          "Las CCAA asumen competencias según lo previsto en sus Estatutos de Autonomía (art. 147 CE).",
+          "El ODS 5 está dedicado expresamente a lograr la igualdad de género y empoderar a todas las mujeres y niñas.",
         ],
-        boeIds: ["BOE-A-1985-5392"],
+        boeIds: ["BOE-A-2007-6115", "BOE-A-2004-21760"],
         questions: [
-          q("¿Qué ley regula las bases del régimen local?", ["Ley 7/1985 (LBRL)", "Ley 39/2015", "Ley 50/1997", "Ley 9/2017"], 0, "LBRL, Ley 7/1985.", "Ley 7/1985"),
-          q("El pleno del Ayuntamiento lo integran:", ["Los concejales electos, presidido por el alcalde", "Solo el alcalde", "Diputados provinciales", "Vecinos elegidos por sorteo"], 0, "El pleno está formado por concejales electos.", "LBRL"),
-          q("¿En qué artículo de la CE se prevén los Estatutos de Autonomía?", ["Art. 147", "Art. 9", "Art. 56", "Art. 81"], 0, "Art. 147 CE: contenido de los Estatutos.", "Art. 147 CE"),
-          q("El alcalde es elegido por:", ["Los concejales del Ayuntamiento", "El Gobierno de España", "Los vecinos por sorteo", "El presidente de la Diputación"], 0, "Lo eligen los concejales (LOREG).", "LOREG"),
-          q("¿Qué entidad local agrupa municipios de una provincia y presta asistencia a los pequeños?", ["La Diputación Provincial", "El Gobierno autonómico", "Un ministerio", "Un tribunal"], 0, "Las Diputaciones prestan asistencia y cooperación a municipios.", "LBRL"),
-          q("Las Comunidades Autónomas se organizan, entre otros, en:", ["Parlamento, Gobierno y Tribunal Superior de Justicia", "Ministerios estatales", "Un único poder", "Tribunales militares"], 0, "Art. 152 CE: órganos institucionales de la CCAA.", "Art. 152 CE"),
+          q(
+            "A partir de cuántas personas trabajadoras es obligatorio para las empresas disponer de un Plan de Igualdad según la LO 3/2007:",
+            ["25 trabajadoras", "50 trabajadoras", "100 trabajadoras", "250 trabajadoras"],
+            1,
+            "El artículo 45.2 de la Ley Orgánica 3/2007 (tras el RDL 6/2019) fija el umbral en 50 o más personas trabajadoras.",
+            "Ley Orgánica 3/2007 de Igualdad",
+            "Artículo 45.2 LO 3/2007",
+            "«En el caso de las empresas de cincuenta o más personas trabajadoras, las medidas de igualdad a que se refiere el apartado anterior deberán dirigirse a la elaboración y aplicación de un plan de igualdad.»"
+          ),
+          q(
+            "¿Cuál es el Objetivo de Desarrollo Sostenible (ODS) de la Agenda 2030 dedicado a promover instituciones eficaces, responsables e inclusivas?",
+            ["ODS 3", "ODS 8", "ODS 16", "ODS 10"],
+            2,
+            "El ODS 16 promueve la paz, la justicia y las instituciones sólidas.",
+            "Agenda 2030 de la ONU",
+            "Meta ODS 16",
+            "«Promover sociedades pacíficas e inclusivas para el desarrollo sostenible, facilitar el acceso a la justicia para todos y crear instituciones eficaces, responsables e inclusivas a todos los niveles.»"
+          ),
+        ],
+      },
+    ],
+  },
+
+  // =========================================================================
+  // BLOQUE IV: DERECHO ADMINISTRATIVO GENERAL
+  // =========================================================================
+  {
+    number: 4,
+    title: "Derecho Administrativo General",
+    ministry: "Ministerio de Justicia y Salas de lo Contencioso-Administrativo",
+    worldName: "Mundo 4 · Palacio de Justicia y Procedimiento",
+    description: "Ley 39/2015 (LPAC), Ley 40/2015 (LRJSP), Acto Administrativo, Fases del Procedimiento, Términos y Plazos, Recursos y Contratos (LCSP).",
+    theme: "procedimiento",
+    bossName: "Doña Procedimiento / Jueza de Alzada",
+    bossIntro: "¡Silencio administrativo, plazos improrrogables y nulidad de pleno derecho! ¡Si dudas en un solo artículo te deniego la plaza!",
+    bossStyle: "judge",
+    topics: [
+      {
+        title: "Ley 39/2015 (LPAC): Acto Administrativo y Eficacia",
+        summary: "Eficacia de los actos, ejecutividad, nulidad de pleno derecho (art. 47) y anulabilidad (art. 48).",
+        npcName: "Don Alberto",
+        npcRole: "Abogado del Estado",
+        npcLines: [
+          "Los actos administrativos se presumen válidos y producen efectos desde la fecha en que se dicten (art. 39.1 LPAC).",
+          "Los supuestos de nulidad de pleno derecho son tasados e imprescriptibles (art. 47.1 LPAC).",
+          "La anulabilidad es la regla general para cualquier otra infracción del ordenamiento (art. 48.1 LPAC).",
+        ],
+        tipName: "Beatriz",
+        tipRole: "Opositora de Gestión",
+        tipLines: [
+          "Apréndete de memoria el art. 47.1: lesión de derechos fundamentales, incompetencia manifiesta por razón de materia o territorio, contenido imposible, delito...",
+        ],
+        boeIds: ["BOE-A-2015-10565"],
+        questions: [
+          q(
+            "Los actos administrativos dictados por órgano manifiestamente incompetente por razón de la materia o del territorio son:",
+            ["Anulables", "Nulos de pleno derecho", "Convalidables", "Meramente irregulares"],
+            1,
+            "El artículo 47.1.b de la Ley 39/2015 sanciona con nulidad de pleno derecho la incompetencia manifiesta material o territorial.",
+            "Ley 39/2015 (LPAC)",
+            "Artículo 47.1.b Ley 39/2015",
+            "«Los actos de las Administraciones Públicas son nulos de pleno derecho en los casos siguientes: [...] b) Los dictados por órgano manifiestamente incompetente por razón de la materia o del territorio.»"
+          ),
+          q(
+            "La convalidación de un acto administrativo anulable produce efectos desde:",
+            ["La fecha en que se dictó el acto original con efectos retroactivos plenos", "La fecha en que tenga lugar la convalidación, salvo excepciones", "Siempre con efectos retroactivos de 3 meses", "El momento de la notificación del acto viciado"],
+            1,
+            "El art. 52.1 LPAC dispone que el acto convalidado produce efectos desde su fecha.",
+            "Ley 39/2015 (LPAC)",
+            "Artículo 52.1 Ley 39/2015",
+            "«La Administración podrá convalidar los actos anulables, subsanando los vicios de que adolezcan. El acto de convalidación producirá efecto desde su fecha, salvo lo dispuesto en el artículo 39.3 para la retroactividad de los actos administrativos.»"
+          ),
+        ],
+      },
+      {
+        title: "Fases del Procedimiento, Términos y Silencio Administrativo",
+        summary: "Iniciación, ordenación, instrucción y finalización. Cómputo de plazos (art. 30) y silencio (art. 24).",
+        npcName: "Rosa María",
+        npcRole: "Jefa de Servicio de Procedimiento",
+        npcLines: [
+          "Si los plazos se fijan en días, se entienden hábiles, excluyéndose sábados, domingos y festivos (art. 30.2 LPAC).",
+          "El plazo de resolución y notificación general si la norma no fija uno es de 3 meses (art. 21.3 LPAC).",
+          "La regla general en procedimientos iniciados a solicitud del interesado es el silencio positivo, salvo excepciones legales.",
+        ],
+        tipName: "Guillermo",
+        tipRole: "Preparador de Administrativo",
+        tipLines: [
+          "Cuidado: en recursos administrativos el silencio es siempre desestimatorio, excepto el 'doble silencio' en recurso de alzada (art. 24.1 párrafo 3).",
+        ],
+        boeIds: ["BOE-A-2015-10565"],
+        questions: [
+          q(
+            "Cuando los plazos se señalan por días en la Ley 39/2015, se entiende que estos son:",
+            ["Siempre naturales", "Hábiles, excluyéndose los sábados, los domingos y los declarados festivos", "Hábiles incluyendo los sábados", "Laborables según el convenio de la empresa"],
+            1,
+            "El artículo 30.2 de la Ley 39/2015 establece que los plazos por días son hábiles y excluyen los sábados.",
+            "Ley 39/2015 (LPAC)",
+            "Artículo 30.2 Ley 39/2015",
+            "«Siempre que por Ley o en el Derecho de la Unión Europea no se exprese otro cómputo, cuando los plazos se señalen por días, se entiende que éstos son hábiles, excluyéndose del cómputo los sábados, los domingos y los declarados festivos.»"
+          ),
+          q(
+            "Cuando las normas reguladoras de los procedimientos no fijen el plazo máximo para resolver y notificar, este será de:",
+            ["Un mes", "Tres meses", "Seis meses", "Veinte días"],
+            1,
+            "El artículo 21.3 de la Ley 39/2015 establece el plazo supletorio general de tres meses.",
+            "Ley 39/2015 (LPAC)",
+            "Artículo 21.3 Ley 39/2015",
+            "«Cuando las normas reguladoras de los procedimientos no fijen el plazo máximo, éste será de tres meses. Este plazo y los previstos en las normas reguladoras de los procedimientos se contarán [...] desde la fecha en que la solicitud haya tenido entrada en el registro electrónico.»"
+          ),
+        ],
+      },
+      {
+        title: "Recursos Administrativos y Contratos del Sector Público",
+        summary: "Recursos de alzada, potestativo de reposición y extraordinario de revisión. Contratos típicos de la Ley 9/2017 (LCSP).",
+        npcName: "Don Gonzalo",
+        npcRole: "Vocal del Tribunal Administrativo Central de Recursos Contractuales",
+        npcLines: [
+          "El recurso de alzada se interpone ante el superior jerárquico en el plazo de 1 mes si el acto es expreso (art. 122 LPAC).",
+          "El recurso de reposición cabe contra actos que agoten la vía administrativa en el plazo de 1 mes (art. 124 LPAC).",
+          "Los contratos del sector público son: obras, concesión de obras, concesión de servicios, suministro y servicios (art. 12 LCSP).",
+        ],
+        tipName: "Helena",
+        tipRole: "Especialista en Contratación Pública",
+        tipLines: [
+          "El contrato menor tiene límites de valor estimado: obras < 40.000 €; suministros y servicios < 15.000 € (art. 118 LCSP).",
+        ],
+        boeIds: ["BOE-A-2015-10565", "BOE-A-2017-12902"],
+        questions: [
+          q(
+            "El plazo para interponer recurso de alzada si el acto administrativo fuera expreso es de:",
+            ["Diez días", "Un mes", "Dos meses", "Tres meses"],
+            1,
+            "El artículo 122.1 de la Ley 39/2015 fija en un mes el plazo de interposición de la alzada.",
+            "Ley 39/2015 (LPAC)",
+            "Artículo 122.1 Ley 39/2015",
+            "«El plazo para la interposición del recurso de alzada será de un mes, si el acto fuera expreso. Transcurrido dicho plazo sin haberse interpuesto el recurso, el acto será firme a todos los efectos.»"
+          ),
+          q(
+            "Según el artículo 118 de la Ley 9/2017 (LCSP), se consideran contratos menores los contratos de valor estimado inferior a:",
+            ["50.000 € en obras y 18.000 € en servicios", "40.000 euros en contratos de obras y 15.000 euros en suministros o servicios", "30.000 € en todo tipo de contratos", "100.000 € en obras públicas"],
+            1,
+            "El art. 118.1 LCSP establece los umbrales de 40.000 € para obras y 15.000 € para suministros y servicios.",
+            "Ley 9/2017 de Contratos del Sector Público",
+            "Artículo 118.1 Ley 9/2017",
+            "«Se consideran contratos menores los contratos de valor estimado inferior a 40.000 euros, cuando se trate de contratos de obras, o a 15.000 euros, cuando se trate de contratos de suministro o de servicios.»"
+          ),
+        ],
+      },
+    ],
+  },
+
+  // =========================================================================
+  // BLOQUE V: ADMINISTRACIÓN DE RECURSOS HUMANOS
+  // =========================================================================
+  {
+    number: 5,
+    title: "Administración de Recursos Humanos",
+    ministry: "Ministerio para la Transformación Digital y la Función Pública",
+    worldName: "Mundo 5 · Ciudad del Empleo Público",
+    description: "TREBEP (RDL 5/2015), Clases de Personal, Selección, Situaciones Administrativas, Retribuciones, Código de Conducta e Incompatibilidades.",
+    theme: "inap",
+    bossName: "Jefe de Personal y Recursos Humanos",
+    bossIntro: "¡El TREBEP es la Biblia del gestor civil del Estado! ¿Conoces las situaciones administrativas, las faltas muy graves y la Ley 53/1984?",
+    bossStyle: "stamp",
+    topics: [
+      {
+        title: "El TREBEP: Clases de Personal y Procesos Selectivos",
+        summary: "RDL 5/2015, funcionarios de carrera, interinos, personal laboral y eventual. Principios constitucionales de acceso.",
+        npcName: "Don Valeriano",
+        npcRole: "Director General de la Función Pública",
+        npcLines: [
+          "Los empleados públicos se clasifican en: funcionarios de carrera, interinos, personal laboral y personal eventual (art. 8 TREBEP).",
+          "Los órganos de selección son colegiados y su composición responderá al principio de profesionalidad y paridad (art. 60 TREBEP).",
+          "El personal eventual solo realiza funciones de confianza o asesoramiento especial (art. 12 TREBEP).",
+        ],
+        tipName: "Fernando",
+        tipRole: "Opositor del Cuerpo de Gestión",
+        tipLines: [
+          "El personal funcionario interino es nombrado por razones expresamente justificadas de necesidad y urgencia (art. 10 TREBEP).",
+        ],
+        boeIds: ["BOE-A-2015-11719"],
+        questions: [
+          q(
+            "Según el artículo 8.2 del TREBEP, los empleados públicos se clasifican en:",
+            ["Funcionarios de carrera y personal contratado", "Funcionarios de carrera, funcionarios interinos, personal laboral y personal eventual", "Personal fijo y personal temporal", "Cuerpos generales y cuerpos especiales"],
+            1,
+            "El artículo 8.2 del TREBEP establece las cuatro clases tasadas de empleados públicos.",
+            "TREBEP (RDL 5/2015)",
+            "Artículo 8.2 TREBEP",
+            "«Los empleados públicos se clasifican en: a) Funcionarios de carrera. b) Funcionarios interinos. c) Personal laboral, ya sea fijo, por tiempo indefinido o temporal. d) Personal eventual.»"
+          ),
+          q(
+            "El nombramiento como funcionario interino para la ejecución de programas de carácter temporal no podrá tener una duración superior a:",
+            ["Un año", "Tres años, ampliable hasta doce meses más por ley", "Seis meses en un período de doce", "Cinco años improrrogables"],
+            1,
+            "El artículo 10.1.c del TREBEP fija el límite máximo de tres años ampliable doce meses.",
+            "TREBEP (RDL 5/2015)",
+            "Artículo 10.1.c TREBEP",
+            "«La ejecución de programas de carácter temporal [...] no podrán tener una duración superior a tres años, ampliable hasta doce meses más por las leyes de Función Pública que se dicten en desarrollo de este Estatuto.»"
+          ),
+        ],
+      },
+      {
+        title: "Derechos, Carrera Profesional y Situaciones Administrativas",
+        summary: "Carrera horizontal y vertical, retribuciones básicas y complementarias, excedencias y servicios especiales (art. 85 y ss.).",
+        npcName: "Pilar Guzmán",
+        npcRole: "Subdirectora de Gestión de Retribuciones",
+        npcLines: [
+          "Las retribuciones básicas son el sueldo y los trienios, fijados en la Ley de Presupuestos (art. 23 TREBEP).",
+          "Las situaciones administrativas son: servicio activo, servicios especiales, servicio en otras AAPP, excedencia y suspensión (art. 85).",
+          "En servicios especiales se perciben las retribuciones del puesto de destino y se reserva la plaza.",
+        ],
+        tipName: "Lorena",
+        tipRole: "Gestora de Personal en Delegación",
+        tipLines: [
+          "La excedencia voluntaria por interés particular exige haber prestado servicios efectivos durante un período mínimo de 5 años.",
+        ],
+        boeIds: ["BOE-A-2015-11719"],
+        questions: [
+          q(
+            "Son retribuciones básicas de los funcionarios públicos según el TREBEP:",
+            ["El sueldo, los trienios y las pagas extraordinarias en lo referente a sueldo y trienios", "El complemento de destino y el complemento específico", "La productividad y las gratificaciones por servicios extraordinarios", "El sueldo y el complemento de productividad"],
+            0,
+            "El artículo 23 del TREBEP define taxativamente las retribuciones básicas.",
+            "TREBEP (RDL 5/2015)",
+            "Artículo 23 TREBEP",
+            "«Son retribuciones básicas: a) El sueldo asignado a cada Subgrupo o Grupo [...] b) Los trienios, que consisten en una cantidad, que será igual para cada Subgrupo o Grupo [...] Las pagas extraordinarias serán dos al año [...] por un importe, cada una de ellas, de las retribuciones básicas y, de la totalidad de las retribuciones complementarias, salvo [...]»"
+          ),
+          q(
+            "¿En qué situación administrativa se declarará a un funcionario que sea elegido Diputado o Senador de las Cortes Generales?",
+            ["Excedencia por interés particular", "Servicios especiales", "Suspensión de funciones", "Servicio en otras Administraciones Públicas"],
+            1,
+            "El artículo 87.1.c del TREBEP declara los servicios especiales al adquirir la condición de parlamentario.",
+            "TREBEP (RDL 5/2015)",
+            "Artículo 87.1.c TREBEP",
+            "«Los funcionarios de carrera serán declarados en situación de servicios especiales: [...] c) Cuando sean elegidos miembros de las Cortes Generales o de las asambleas legislativas de las comunidades autónomas [...]»"
+          ),
+        ],
+      },
+      {
+        title: "Deberes, Código de Conducta e Incompatibilidades",
+        summary: "Principios éticos y de conducta (arts. 52-54 TREBEP), régimen disciplinario y Ley 53/1984 de Incompatibilidades.",
+        npcName: "Ignacio Carvajal",
+        npcRole: "Inspector General de Servicios",
+        npcLines: [
+          "El Código de Conducta se divide en principios éticos (art. 53) y principios de conducta (art. 54).",
+          "Las faltas disciplinarias se tipifican en muy graves, graves y leves (art. 95 TREBEP).",
+          "La Ley 53/1984 prohíbe el desempeño de un segundo puesto o actividad en el sector público, salvo las excepciones tasadas.",
+        ],
+        tipName: "Manuel",
+        tipRole: "Preparador de Recursos Humanos",
+        tipLines: [
+          "La separación del servicio para funcionarios de carrera solo puede imponerse por la comisión de faltas muy graves.",
+        ],
+        boeIds: ["BOE-A-2015-11719", "BOE-A-1984-28229"],
+        questions: [
+          q(
+            "La sanción disciplinaria de separación del servicio solo puede imponerse por la comisión de:",
+            ["Faltas leves reiteradas", "Faltas graves", "Faltas muy graves", "Cualquier falta que cause daño patrimonial"],
+            2,
+            "El artículo 96.1.a del TREBEP reserva la separación del servicio exclusivamente a faltas muy graves.",
+            "TREBEP (RDL 5/2015)",
+            "Artículo 96.1.a TREBEP",
+            "«Por razón de las faltas cometidas podrán imponerse las siguientes sanciones: a) Separación del servicio de los funcionarios, que en el caso de los funcionarios interinos comportará la revocación de su nombramiento, y que sólo podrá sancionar la comisión de faltas muy graves.»"
+          ),
+          q(
+            "Según la Ley 53/1984 de Incompatibilidades, la autorización de compatibilidad para una segunda actividad en el sector público o privado requiere:",
+            ["El visto bueno informal del superior jerárquico", "Resolución expresa previa del órgano competente antes de iniciar la actividad", "Comunicación verbal tras comenzar a ejercerla", "No requiere autorización si no supera 10 horas semanales"],
+            1,
+            "El artículo 1.3 de la Ley 53/1984 exige resolución expresa de reconocimiento de compatibilidad con carácter previo.",
+            "Ley 53/1984 de Incompatibilidades",
+            "Artículo 1.3 Ley 53/1984",
+            "«En cualquier caso, el desempeño de un segundo puesto o actividad requerirá la previa y expresa autorización de compatibilidad, que no podrá suponer modificación de la jornada de trabajo y horario de los dos puestos y que se condiciona a su estricto cumplimiento en ambos.»"
+          ),
+        ],
+      },
+    ],
+  },
+
+  // =========================================================================
+  // BLOQUE VI: GESTIÓN FINANCIERA Y SEGURIDAD SOCIAL
+  // =========================================================================
+  {
+    number: 6,
+    title: "Gestión Financiera y Seguridad Social",
+    ministry: "Ministerio de Hacienda y Ministerio de Inclusión, Seguridad Social y Migraciones",
+    worldName: "Mundo 6 · Real Casa de la Aduana y Tesoro",
+    description: "Ley General Presupuestaria (Ley 47/2003 LGP), Ciclo Presupuestario, Fases del Gasto (ADOP), Control del Gasto (IGAE) y Régimen General de la Seguridad Social.",
+    theme: "hacienda",
+    bossName: "El Gran Interventor General",
+    bossIntro: "¡Sin crédito presupuestario adecuado y suficiente todo acto es nulo de pleno derecho! ¡A ver cómo ejecutas las fases ADOP!",
+    bossStyle: "inspector",
+    topics: [
+      {
+        title: "Ley General Presupuestaria y Presupuestos del Estado",
+        summary: "Ley 47/2003 (LGP), principios presupuestarios, estructura de los PGE y Ley de Estabilidad Presupuestaria.",
+        npcName: "Don Bernardo",
+        npcRole: "Interventor Delegado en el Ministerio de Hacienda",
+        npcLines: [
+          "Los Presupuestos Generales del Estado constituyen la expresión cifrada, conjunta y sistemática de los derechos y obligaciones a liquidar.",
+          "El principio de legalidad financiera: no se puede asumir ningún gasto sin crédito presupuestario (art. 46 LGP).",
+          "La estructura presupuestaria comprende: orgánica, por programas y económica (art. 39 LGP).",
+        ],
+        tipName: "Raquel",
+        tipRole: "Auditora del Tribunal de Cuentas",
+        tipLines: [
+          "El Gobierno debe presentar los PGE en el Congreso al menos tres meses antes de la expiración de los del año anterior (antes del 1 de octubre).",
+        ],
+        boeIds: ["BOE-A-2003-21614", "BOE-A-1978-31229"],
+        questions: [
+          q(
+            "Según el artículo 134.1 de la Constitución Española, a quién corresponde la elaboración de los Presupuestos Generales del Estado y a quién su examen, enmienda y aprobación:",
+            ["Al Rey su elaboración y a las Cortes su aprobación", "Al Gobierno su elaboración y a las Cortes Generales su examen, enmienda y aprobación", "Al Ministerio de Hacienda exclusivamente", "Al Congreso su elaboración y al Senado su ratificación"],
+            1,
+            "El artículo 134.1 CE atribuye la elaboración al Gobierno y la potestad presupuestaria a las Cortes.",
+            "Constitución Española",
+            "Artículo 134.1 CE",
+            "«Corresponde al Gobierno la elaboración de los Presupuestos Generales del Estado y a las Cortes Generales, su examen, enmienda y aprobación.»"
+          ),
+          q(
+            "Los créditos para gastos se destinarán exclusivamente a la finalidad específica para la que hayan sido autorizados. Este principio se denomina:",
+            ["Especialidad temporal", "Especialidad cualitativa", "Especialidad cuantitativa", "Unidad de caja"],
+            1,
+            "El artículo 42 de la LGP define el principio de especialidad cualitativa.",
+            "Ley 47/2003 General Presupuestaria",
+            "Artículo 42 Ley 47/2003",
+            "«Los créditos para gastos se destinarán exclusivamente a la finalidad específica para la que hayan sido autorizados por la Ley de Presupuestos o por las modificaciones realizadas conforme a esta ley.»"
+          ),
+        ],
+      },
+      {
+        title: "Modificaciones de Crédito y Ejecución del Gasto (Fases ADOP)",
+        summary: "Transferencias, suplementos, créditos extraordinarios e incorporación de remanentes. Fases A, D, O y P.",
+        npcName: "Victoria Santamaría",
+        npcRole: "Jefa de Área de Gestión Presupuestaria",
+        npcLines: [
+          "Las fases del procedimiento de gasto son: Aprobación (A), Compromiso (D), Reconocimiento de la obligación (O) y Pago (P).",
+          "El Compromiso del gasto (D) es el acto por el que se acuerda con un tercero la realización del gasto (art. 73.3 LGP).",
+          "El Reconocimiento de la obligación (O) exige la previa acreditación de la prestación o derecho (regla del servicio hecho).",
+        ],
+        tipName: "Javier",
+        tipRole: "Opositor de A2 Estado",
+        tipLines: [
+          "Recuerda las modificaciones de crédito: las transferencias trasladan importe entre créditos sin alterar la cuantía total del presupuesto.",
+        ],
+        boeIds: ["BOE-A-2003-21614"],
+        questions: [
+          q(
+            "El acto administrativo mediante el cual se formaliza con un tercero la realización de obras o prestaciones por importe y condiciones determinadas se corresponde con la fase:",
+            ["Aprobación del gasto (A)", "Compromiso del gasto (D)", "Reconocimiento de la obligación (O)", "Ordenación del pago (P)"],
+            1,
+            "El artículo 73.3 de la Ley 47/2003 (LGP) define el compromiso o disposición de gasto.",
+            "Ley 47/2003 General Presupuestaria",
+            "Artículo 73.3 Ley 47/2003",
+            "«El compromiso es el acto mediante el cual se acuerda, con un tercero y tras el cumplimiento de los trámites legalmente establecidos, la realización de gastos previamente aprobados, por un importe determinado o determinable.»"
+          ),
+          q(
+            "Para proceder al Reconocimiento de la Obligación (fase O) es requisito indispensable:",
+            ["La simple previsión de que se realizará el servicio", "La acreditación documental ante el órgano competente de la realización de la prestación (servicio hecho)", "La firma del Ministro de Hacienda", "Que el ejercicio presupuestario haya concluido"],
+            1,
+            "El artículo 73.4 de la LGP exige la previa acreditación documental de la realización de la prestación.",
+            "Ley 47/2003 General Presupuestaria",
+            "Artículo 73.4 Ley 47/2003",
+            "«El reconocimiento de la obligación es el acto mediante el cual se declara la existencia de un crédito exigible contra la Hacienda Pública estatal, derivado de un gasto aprobado y comprometido y que comporta la propuesta para su pago previa acreditación documental ante el órgano competente de la realización de la prestación.»"
+          ),
+        ],
+      },
+      {
+        title: "Control del Gasto Público y Sistema de Seguridad Social",
+        summary: "La IGAE, función interventora, control financiero permanente, auditoría pública y Régimen General de la Seguridad Social.",
+        npcName: "Don Enrique",
+        npcRole: "Interventor General del Estado (IGAE)",
+        npcLines: [
+          "La Intervención General de la Administración del Estado (IGAE) ejerce el control interno de la gestión económico-financiera.",
+          "La función interventora fiscaliza previamente todos los actos de la AGE que den lugar al reconocimiento de derechos y obligaciones.",
+          "El sistema de la Seguridad Social garantiza a los trabajadores y sus familias la asistencia y prestaciones ante contingencias.",
+        ],
+        tipName: "Silvia",
+        tipRole: "Inspectora de Trabajo y Seguridad Social",
+        tipLines: [
+          "No confundas el control interno (ejercido por la IGAE) con el control externo del Tribunal de Cuentas (órgano supremo fiscalizador, art. 136 CE).",
+        ],
+        boeIds: ["BOE-A-2003-21614", "BOE-A-2015-11724"],
+        questions: [
+          q(
+            "El control de legalidad interno previo de todos los actos de la Administración del Estado que impliquen gastos u obligaciones es ejercido por:",
+            ["El Tribunal de Cuentas a posteriori", "La IGAE mediante la función interventora", "El Banco de España", "La Comisión General de Secretarios de Estado"],
+            1,
+            "El artículo 148 de la Ley 47/2003 atribuye la función interventora a la IGAE con carácter previo.",
+            "Ley 47/2003 General Presupuestaria",
+            "Artículo 148 Ley 47/2003",
+            "«La función interventora tiene por objeto controlar, antes de que sean aprobados, los actos del sector público estatal que den lugar al reconocimiento de derechos o a la realización de gastos, así como los ingresos y pagos que de ellos se deriven, y la inversión o aplicación en general de sus fondos públicos, a fin de asegurar que su gestión se ajuste a las disposiciones aplicables en cada caso.»"
+          ),
+          q(
+            "¿A qué entidad gestora de la Seguridad Social corresponde la gestión y administración de las prestaciones económicas del sistema (salvo desempleo)?",
+            ["Tesorería General de la Seguridad Social (TGSS)", "Instituto Nacional de la Seguridad Social (INSS)", "Servicio Público de Empleo Estatal (SEPE)", "Instituto de Mayores y Servicios Sociales (IMSERSO)"],
+            1,
+            "El INSS tiene encomendada la gestión de las prestaciones económicas (jubilación, incapacidad, etc.), mientras la TGSS gestiona la caja única y cotización.",
+            "Ley General de la Seguridad Social",
+            "Artículo 66 RDL 8/2015",
+            "«El Instituto Nacional de la Seguridad Social es una entidad gestora dotada de personalidad jurídica propia que tiene encomendada la gestión y administración de las prestaciones económicas del sistema de la Seguridad Social.»"
+          ),
         ],
       },
     ],
   },
 ];
-
-export const TUTORIAL_TITLE = "Llegada a la Plaza";

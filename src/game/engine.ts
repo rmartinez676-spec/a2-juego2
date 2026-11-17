@@ -21,6 +21,8 @@ export interface QuestionLite {
   answer: number;
   explanation: string;
   reference: string | null;
+  legalArticle?: string;
+  legalText?: string;
 }
 
 export interface NpcLite {
@@ -53,6 +55,8 @@ export function randomizeQuestion(q: QuestionLite, difficulty: Difficulty = "nor
     answer: Math.max(0, newAnswer),
     explanation: q.explanation,
     reference: q.reference,
+    legalArticle: q.legalArticle,
+    legalText: q.legalText,
   };
 }
 
@@ -179,6 +183,14 @@ interface FloatText {
   color: string;
 }
 
+interface BumpedBlock {
+  tx: number;
+  ty: number;
+  time: number;
+  c: string;
+  coinY: number;
+}
+
 function overlap(a: Box, b: Box): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
@@ -188,6 +200,7 @@ export class GameEngine {
   overlay: Overlay | null = null;
   input: InputState = { left: false, right: false, jump: false, punch: false, interact: false };
 
+  private bumpedBlocks: BumpedBlock[] = [];
   private prev: InputState = { left: false, right: false, jump: false, punch: false, interact: false };
   private ctx: CanvasRenderingContext2D;
   private cfg: EngineConfig;
@@ -417,9 +430,9 @@ export class GameEngine {
         ? { arena: true, length: 0, qBlocks: 0, enemyRate: 0, npcs: 0 }
         : {
             arena: false,
-            length: this.cfg.mode === "tutorial" ? 120 : 170,
-            qBlocks: this.cfg.mode === "tutorial" ? 3 : 4,
-            enemyRate: 0.35,
+            length: this.cfg.mode === "tutorial" ? 130 : 180,
+            qBlocks: this.cfg.mode === "tutorial" ? 4 : 7,
+            enemyRate: 0.45,
             npcs: this.cfg.npcs.length,
           },
     );
@@ -486,6 +499,14 @@ export class GameEngine {
     const pi = this.input.interact && !this.prev.interact;
     this.prev = { ...this.input };
     this.tickTexts();
+    for (let i = this.bumpedBlocks.length - 1; i >= 0; i--) {
+      const bb = this.bumpedBlocks[i];
+      bb.time++;
+      bb.coinY -= 1.6;
+      if (bb.time > 16) {
+        this.bumpedBlocks.splice(i, 1);
+      }
+    }
     if (!this.overlay && this.p && !this.p.dead) {
       this.stepPlayer(pj, pp, pi);
       if (!this.p.dead) {
@@ -659,6 +680,7 @@ export class GameEngine {
     const c = this.tile(tx, ty);
     if (c === "Q") {
       this.rows[ty][tx] = "X";
+      this.bumpedBlocks.push({ tx, ty, time: 0, c: "X", coinY: 0 });
       audio.sfx("bump");
       if (this.bumpDeck.length === 0) this.bumpDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
       const q = this.bumpDeck.pop();
@@ -671,6 +693,7 @@ export class GameEngine {
       this.overlay = { kind: "quiz", mode: "bump", title: "Bloque de pregunta", q: randomizeQuestion(q, this.difficulty), step: 1, total: 1, answered: null };
     } else if (c === "B") {
       this.rows[ty][tx] = "X";
+      this.bumpedBlocks.push({ tx, ty, time: 0, c: "X", coinY: 0 });
       audio.sfx("bump");
       this.addCoins(1);
       this.score += 10;
@@ -934,16 +957,18 @@ export class GameEngine {
     g.translate(-Math.round(this.camX), -CAM_Y);
     const x0 = Math.max(0, Math.floor(this.camX / TILE) - 1);
     const x1 = Math.min(this.W - 1, Math.floor((this.camX + VIEW_W) / TILE) + 1);
+    // 1. Capa de baldosas de suelo, plataformas y objetos de fondo
     for (let ty = 0; ty < LEVEL_H; ty++) {
       for (let tx = x0; tx <= x1; tx++) {
         const c = this.rows[ty][tx];
-        if (c === ".") continue;
+        if (c === "." || c === "Q" || c === "B" || c === "X") continue;
         R.drawTile(g, c, tx * TILE, ty * TILE, th, this.t, ty > 0 && this.rows[ty - 1][tx] === "#");
       }
     }
     if (this.cfg.mode === "topic") R.drawGate(g, this.goalX, GROUND * TILE);
     if (this.cfg.mode === "tutorial") R.drawGoal(g, this.goalX, GROUND * TILE, this.t);
 
+    // 2. Capa de NPCs y Enemigos
     for (const n of this.npcs) R.drawNPC(g, n.x, n.y, n.cfg.name, n.cfg.role, this.t);
     for (const e of this.enemies) {
       if (e.alive) R.drawEnemy(g, e.kind, e.x + 5, e.y + e.h, e.dir, Math.floor(this.t / 12) % 2);
@@ -953,6 +978,7 @@ export class GameEngine {
     }
     for (const pr of this.projs) R.drawProjectile(g, pr.x, pr.y, this.t);
 
+    // 3. Capa de la Jugadora (Lucía)
     const p = this.p;
     const blinkOff = p.inv > 0 && Math.floor(this.t / 4) % 2 === 0;
     if (!blinkOff) {
@@ -963,6 +989,26 @@ export class GameEngine {
         t: this.t,
         hurt: p.inv > 60,
       });
+    }
+
+    // 4. Capa superior de Bloques Sólidos Frontales ('Q', 'B', 'X')
+    // Se dibujan POR ENCIMA de la jugadora para que la cabeza nunca se superponga al bloque (estilo Mario).
+    for (let ty = 0; ty < LEVEL_H; ty++) {
+      for (let tx = x0; tx <= x1; tx++) {
+        const c = this.rows[ty][tx];
+        if (c !== "Q" && c !== "B" && c !== "X") continue;
+        const bb = this.bumpedBlocks.find((b) => b.tx === tx && b.ty === ty);
+        if (bb) {
+          const bounceOffset = -Math.sin((bb.time / 16) * Math.PI) * 6;
+          R.drawTile(g, c, tx * TILE, ty * TILE + bounceOffset, th, this.t, false);
+          // Moneda de Euro 3D emergente volando sobre el bloque
+          if (bb.coinY > -28) {
+            R.drawTile(g, "c", tx * TILE, ty * TILE - 6 + bb.coinY, th, this.t * 3, false);
+          }
+        } else {
+          R.drawTile(g, c, tx * TILE, ty * TILE, th, this.t, false);
+        }
+      }
     }
     g.textAlign = "left";
     for (const tx of this.texts) {

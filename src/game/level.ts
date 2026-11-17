@@ -100,17 +100,22 @@ export function generateLevel(seed: number, o: LevelOpts): LevelData {
         top = Math.max(8, Math.min(10, top + (r() < 0.5 ? -1 : 1)));
         flatRun(4 + Math.floor(r() * 3), o.enemyRate);
       } else if (v < 0.82) {
+        // Estructura estilo Super Mario: bloques flotantes '?' y ladrillos 'B' con salto despejado
         const len = 5 + Math.floor(r() * 4);
         const s = x;
-        for (let i = 0; i < len && x < W - 16; i++, x++) colTop[x] = top;
-        for (let c = s; c < x; c++) {
-          set(c, top - 2, "=");
-          if ((c - s) % 3 === 1 && qLeft > 0 && r() < 0.7) {
-            set(c, top - 4, "Q");
+        for (let i = 0; i < len && x < W - 16; i++, x++) {
+          colTop[x] = top;
+          flatCols.push(x);
+        }
+        for (let c = s + 1; c < x - 1; c++) {
+          if ((c - s) % 2 === 1 && qLeft > 0 && r() < 0.85) {
+            set(c, top - 3, "Q");
             qLeft--;
-          } else if ((c - s) % 3 === 2 && r() < 0.3) {
-            set(c, top - 4, "B");
+          } else if (r() < 0.6) {
+            set(c, top - 3, "B");
           }
+          // Monedas de Euro flotando sobre algunos bloques
+          if (r() < 0.35) set(c, top - 5, "c");
         }
       } else {
         flatRun(3, 0);
@@ -133,12 +138,12 @@ export function generateLevel(seed: number, o: LevelOpts): LevelData {
     for (let cy = t; cy < LEVEL_H; cy++) grid[cy][cx] = "#";
   }
 
-  // Q extra en el suelo si faltan (siempre reachables desde el suelo)
+  // Q extra garantizados a lo largo del nivel siempre a la altura perfecta para saltar y golpear
   if (!o.arena) {
-    for (let k = 0; qLeft > 0 && k < flatCols.length; k += 9) {
+    for (let k = 0; qLeft > 0 && k < flatCols.length; k += 6) {
       const cx = flatCols[k];
-      if (cx > 20 && cx < W - 24 && colTop[cx] >= 0 && grid[colTop[cx] - 4][cx] === ".") {
-        set(cx, colTop[cx] - 4, "Q");
+      if (cx > 15 && cx < W - 20 && colTop[cx] >= 8 && grid[colTop[cx] - 3][cx] === ".") {
+        set(cx, colTop[cx] - 3, "Q");
         qLeft--;
       }
     }

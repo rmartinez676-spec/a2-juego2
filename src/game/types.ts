@@ -7,6 +7,8 @@ export interface QuestionDTO {
   answer: number;
   explanation: string;
   reference: string | null;
+  legalArticle?: string;
+  legalText?: string;
 }
 
 export interface TopicDTO {

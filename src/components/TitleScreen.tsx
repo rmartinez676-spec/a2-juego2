@@ -13,6 +13,7 @@ interface Props {
   difficulty: Difficulty;
   hasProgress: boolean;
   onPlay: () => void;
+  onOpenStudyHub?: () => void;
   onToggleMute: () => void;
   onToggleMusic: () => void;
   onSelectDifficulty: (d: Difficulty) => void;
@@ -26,6 +27,7 @@ export default function TitleScreen({
   difficulty,
   hasProgress,
   onPlay,
+  onOpenStudyHub,
   onToggleMute,
   onToggleMusic,
   onSelectDifficulty,
@@ -180,11 +182,20 @@ export default function TitleScreen({
               >
                 ▶ EMPEZAR REPASO
               </button>
+              {onOpenStudyHub && (
+                <button
+                  type="button"
+                  onClick={onOpenStudyHub}
+                  className="cursor-pointer rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-[3cqw] py-[1.4cqw] text-[2.2cqw] font-black text-white shadow-[0_4px_0_#1e3a8a] transition active:translate-y-[2px] active:shadow-none hover:from-sky-400 hover:to-indigo-500"
+                >
+                  🏫 Aula INAP & Mini-Juegos
+                </button>
+              )}
               <Link
                 href="/admin"
                 className="rounded-xl bg-white/15 px-[2.4cqw] py-[1.4cqw] text-[2.2cqw] font-bold text-white backdrop-blur transition hover:bg-white/25"
               >
-                ✎ Actualizar temario / BOE
+                ✎ BOE / Temario
               </Link>
               {hasProgress && (
                 <button

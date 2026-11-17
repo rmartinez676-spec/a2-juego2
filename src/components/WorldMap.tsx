@@ -13,6 +13,7 @@ interface Props {
   musicMuted: boolean;
   difficulty: Difficulty;
   onPlay: (stage: Stage) => void;
+  onOpenStudyHub?: () => void;
   onBack: () => void;
   onToggleFree: () => void;
   onToggleMute: () => void;
@@ -48,6 +49,7 @@ export default function WorldMap({
   musicMuted,
   difficulty,
   onPlay,
+  onOpenStudyHub,
   onBack,
   onToggleFree,
   onToggleMute,
@@ -126,6 +128,17 @@ export default function WorldMap({
                 {difficulty === "easy" ? "🟢 Fácil" : difficulty === "normal" ? "🟡 Estándar" : "🔴 Tribunal"}
               </button>
             </div>
+          )}
+
+          {onOpenStudyHub && (
+            <button
+              type="button"
+              onClick={onOpenStudyHub}
+              className="cursor-pointer rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 px-[1.6cqw] py-[0.7cqw] text-[1.8cqw] font-black text-white hover:from-sky-400 hover:to-indigo-500 active:scale-95 shadow-md transition"
+              title="Abrir Aula INAP con simulacros oficiales, plazos y BOE"
+            >
+              🏫 Aula INAP & Mini-Juegos
+            </button>
           )}
 
           <button

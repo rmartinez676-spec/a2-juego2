@@ -41,6 +41,8 @@ export function buildFallbackGameData(): GameData {
           answer: q.answer,
           explanation: q.explanation,
           reference: q.reference ?? null,
+          legalArticle: q.legalArticle,
+          legalText: q.legalText,
         })),
       })),
     })),

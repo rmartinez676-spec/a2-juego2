@@ -10,6 +10,7 @@ import { THEMES, TITLE_MUSIC } from "@/game/themes";
 import type { ExitResult, GameData, Progress, Stage } from "@/game/types";
 import TitleScreen from "./TitleScreen";
 import WorldMap from "./WorldMap";
+import StudyHubModal from "./StudyHubModal";
 
 type Screen = "title" | "map" | "play";
 
@@ -72,6 +73,7 @@ export default function Game({ data }: { data: GameData }) {
   const [stage, setStage] = useState<Stage | null>(null);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>({ width: 960, height: 540 });
+  const [studyHubOpen, setStudyHubOpen] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -351,6 +353,7 @@ export default function Game({ data }: { data: GameData }) {
               audio.playMusic("title", TITLE_MUSIC);
               goMap();
             }}
+            onOpenStudyHub={() => setStudyHubOpen(true)}
             onToggleMute={toggleMute}
             onToggleMusic={toggleMusic}
             onSelectDifficulty={handleDifficultyChange}
@@ -369,6 +372,7 @@ export default function Game({ data }: { data: GameData }) {
             musicMuted={musicMuted}
             difficulty={difficulty}
             onPlay={startStage}
+            onOpenStudyHub={() => setStudyHubOpen(true)}
             onBack={() => {
               audio.playMusic("title", TITLE_MUSIC);
               setScreenBoth("title");
@@ -457,6 +461,14 @@ export default function Game({ data }: { data: GameData }) {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setStudyHubOpen(true)}
+                  className="cursor-pointer rounded bg-sky-500/30 px-[1.2cqw] py-[0.3cqw] text-[1.8cqw] font-bold text-sky-200 hover:bg-sky-500/50"
+                  title="Abrir Aula INAP"
+                >
+                  🏫 Aula
+                </button>
+                <button
+                  type="button"
                   onClick={() => finish({ completed: false })}
                   className="cursor-pointer rounded bg-white/15 px-[1.2cqw] py-[0.3cqw] text-[1.8cqw] hover:bg-white/30"
                 >
@@ -524,6 +536,16 @@ export default function Game({ data }: { data: GameData }) {
             )}
           </>
         )}
+
+        {/* Modal de Estudio: Simulacro INAP, Duelo de Plazos y BOE */}
+        <StudyHubModal
+          data={data}
+          isOpen={studyHubOpen}
+          onClose={() => setStudyHubOpen(false)}
+          onReward={() => {
+            audio.sfx("coin");
+          }}
+        />
       </div>
 
       <div className="rotate-hint fixed inset-0 flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-center text-white">
@@ -704,7 +726,20 @@ function OverlayView({ overlay, difficulty, onNext, onAnswer, onContinue, onRetr
                 {answered.ok ? "¡Correcto! 🎉" : "Incorrecto ❌"}
               </p>
               <p className="mt-[0.6cqw] text-[2cqw] leading-snug text-slate-100">{q.explanation}</p>
-              {q.reference && <p className="mt-[0.6cqw] text-[1.8cqw] text-amber-200">📜 Referencia legal: {q.reference}</p>}
+              {q.reference && <p className="mt-[0.6cqw] text-[1.8cqw] text-amber-200">📜 {q.reference}</p>}
+
+              {/* Texto Literal de la Ley del BOE */}
+              {q.legalText && (
+                <div className="mt-[1cqw] rounded-md border-l-4 border-amber-400 bg-amber-950/40 p-[1.2cqw] text-amber-100">
+                  <p className="text-[1.6cqw] font-bold uppercase tracking-wider text-amber-300">
+                    ⚖️ {q.legalArticle ?? "Texto Literal de la Ley (BOE)"}
+                  </p>
+                  <blockquote className="mt-[0.4cqw] text-[1.8cqw] italic leading-relaxed text-slate-200">
+                    {q.legalText}
+                  </blockquote>
+                </div>
+              )}
+
               <div className="mt-[1.2cqw] flex justify-end">
                 <button
                   type="button"
