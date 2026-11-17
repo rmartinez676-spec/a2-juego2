@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Juego a pantalla completa: sin scroll, sin selección ni menús contextuales en móvil */
+.game-root {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-root button {
+  touch-action: manipulation;
+}
+
+.rotate-hint {
+  display: none;
+}
+
+/* En móviles en vertical se pide girar el dispositivo */
+@media (orientation: portrait) and (pointer: coarse) {
+  .game-frame {
+    display: none;
+  }
+  .rotate-hint {
+    display: flex;
+  }
+}
