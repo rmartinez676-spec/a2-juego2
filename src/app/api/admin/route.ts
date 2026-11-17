@@ -1,5 +1,5 @@
 import { count, eq } from "drizzle-orm";
-import { db } from "@/db";
+import { db, hasDb } from "@/db";
 import { blocks, boeSources, questions, topics } from "@/db/schema";
 import { ensureSeed } from "@/db/seed";
 import { isValidBoeId, syncBoeSources } from "@/lib/boe";
@@ -45,9 +45,20 @@ function questionFields(b: Body) {
 }
 
 export async function POST(req: Request) {
-  await ensureSeed();
   const b = (await req.json().catch(() => null)) as Body | null;
   if (!b || typeof b.action !== "string") return fail("Petición inválida");
+
+  if (b.action === "syncBoe") {
+    const results = await syncBoeSources();
+    return Response.json({ ok: true, results });
+  }
+
+  if (!hasDb || !db) {
+    return Response.json({ ok: true, note: "Modo standalone: cambios aplicados temporalmente." });
+  }
+
+  await ensureSeed();
+
 
   switch (b.action) {
     case "updateBlock": {

@@ -275,7 +275,76 @@ export function drawGoal(g: CanvasRenderingContext2D, x: number, groundY: number
   g.fill();
 }
 
-// Dibuja una persona pixel-art con los pies en (x, y). Se usa para jugador, NPC, burócratas y jefes.
+// Caché de imágenes de la jugadora (Lucía)
+const SPRITE_CACHE: Partial<Record<"walk" | "idle" | "cheer", HTMLImageElement>> = {};
+
+function getSprite(key: "walk" | "idle" | "cheer"): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  if (!SPRITE_CACHE[key]) {
+    const img = new Image();
+    img.src = `/player/${key}.png`;
+    SPRITE_CACHE[key] = img;
+  }
+  const img = SPRITE_CACHE[key];
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+export function drawPlayer(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  o: {
+    flip?: boolean;
+    state?: "idle" | "walk" | "jump" | "punch" | "cheer" | "hurt";
+    t?: number;
+    hurt?: boolean;
+  } = {},
+): void {
+  const flip = o.flip ?? false;
+  const state = o.state ?? "idle";
+  const t = o.t ?? 0;
+
+  let spriteName: "walk" | "idle" | "cheer" = "walk";
+  if (state === "cheer" || state === "jump" || state === "punch") {
+    spriteName = "cheer";
+  } else if (state === "idle") {
+    spriteName = "idle";
+  } else {
+    spriteName = "walk";
+  }
+
+  const sprite = getSprite(spriteName);
+  if (!sprite) {
+    drawPerson(g, x, y, PLAYER_LOOK, { flip, frame: Math.floor(t / 8) % 2, hurt: o.hurt });
+    return;
+  }
+
+  g.save();
+  if (o.hurt && t % 4 < 2) {
+    g.globalAlpha = 0.35;
+  }
+
+  // Altura del sprite adaptada a la escala de 16px por bloque
+  const targetH = spriteName === "idle" ? 22 : 24;
+  const ratio = sprite.naturalWidth / sprite.naturalHeight;
+  const targetW = Math.round(targetH * ratio);
+
+  // Efecto de balanceo al caminar
+  const bob = state === "walk" ? Math.abs(Math.sin(t / 3.5)) * 1.5 : 0;
+  const drawY = y - targetH - bob;
+
+  if (flip) {
+    g.translate(x, drawY);
+    g.scale(-1, 1);
+    g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+  } else {
+    g.translate(x, drawY);
+    g.drawImage(sprite, -targetW / 2, 0, targetW, targetH);
+  }
+  g.restore();
+}
+
+// Dibuja una persona pixel-art con los pies en (x, y). Se usa para jugador (fallback), NPC, burócratas y jefes.
 export function drawPerson(
   g: CanvasRenderingContext2D,
   x: number,
@@ -283,6 +352,7 @@ export function drawPerson(
   look: Look,
   o: { flip?: boolean; frame?: number; arm?: boolean; hurt?: boolean } = {},
 ): void {
+
   const f = o.flip ? -1 : 1;
   const fr = o.frame ?? 0;
   const rect = (dx: number, dy: number, w: number, h: number, color: string) => {

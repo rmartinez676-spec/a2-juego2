@@ -27,9 +27,35 @@ export interface NpcLite {
 }
 
 export type StageMode = "tutorial" | "topic" | "boss" | "exam";
+export type Difficulty = "easy" | "normal" | "hard";
+
+export function randomizeQuestion(q: QuestionLite, difficulty: Difficulty = "normal"): QuestionLite {
+  const origIndices = [0, 1, 2, 3];
+  let availableIndices = [...origIndices];
+  if (difficulty === "easy" && q.options.length === 4) {
+    const wrongIndices = origIndices.filter((idx) => idx !== q.answer);
+    const dropIdx = wrongIndices[Math.floor(Math.random() * wrongIndices.length)];
+    availableIndices = origIndices.filter((idx) => idx !== dropIdx);
+  }
+  for (let i = availableIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [availableIndices[i], availableIndices[j]] = [availableIndices[j], availableIndices[i]];
+  }
+  const shuffledOptions = availableIndices.map((idx) => q.options[idx]);
+  const newAnswer = availableIndices.indexOf(q.answer);
+  return {
+    id: q.id,
+    prompt: q.prompt,
+    options: shuffledOptions,
+    answer: Math.max(0, newAnswer),
+    explanation: q.explanation,
+    reference: q.reference,
+  };
+}
 
 export interface EngineConfig {
   mode: StageMode;
+  difficulty?: Difficulty;
   seed: number;
   theme: Theme;
   title: string;
@@ -176,6 +202,7 @@ export class GameEngine {
   private projs: Proj[] = [];
   private boss: BossState | null = null;
   private texts: FloatText[] = [];
+  private difficulty: Difficulty = "normal";
   private lives = 3;
   private coins = 0;
   private score = 0;
@@ -198,6 +225,7 @@ export class GameEngine {
     g.imageSmoothingEnabled = false;
     this.ctx = g;
     this.cfg = cfg;
+    this.difficulty = cfg.difficulty ?? "normal";
     this.onChange = onChange;
   }
 
@@ -216,7 +244,7 @@ export class GameEngine {
   }
 
   restart(): void {
-    this.lives = 3;
+    this.lives = this.difficulty === "easy" ? 4 : this.difficulty === "hard" ? 2 : 3;
     this.coins = 0;
     this.score = 0;
     this.overlay = null;
@@ -229,8 +257,8 @@ export class GameEngine {
     this.projs = [];
     this.texts = [];
     this.buildLevel();
-    this.bumpDeck = shuffle(this.cfg.pool);
-    this.bossDeck = shuffle(this.cfg.pool);
+    this.bumpDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
+    this.bossDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
     if (this.boss) {
       if (this.cfg.bossIntro.length > 0) {
         this.overlay = {
@@ -270,7 +298,15 @@ export class GameEngine {
     const ok = choice === o.q.answer;
     this.overlay = { ...o, answered: { chosen: choice, ok } };
     audio.sfx(ok ? "correct" : "wrong");
-    if (o.mode === "test" && ok) this.testScore++;
+    if (o.mode === "test") {
+      if (ok) {
+        this.testScore++;
+      } else if (this.difficulty === "hard") {
+        // En dificultad oficial (Tribunal), cada fallo penaliza 0.33 aciertos (fórmula oficial AGE)
+        this.testScore = Math.max(0, Math.round((this.testScore - 0.33) * 100) / 100);
+        this.popText(this.p.x, this.p.y - 12, "-0.33", "#f87171");
+      }
+    }
     if (o.mode === "bump" && ok) {
       this.score += 100;
       this.addCoins(3);
@@ -328,7 +364,11 @@ export class GameEngine {
   retryTest(): void {
     if (this.cfg.mode !== "topic") return;
     this.gateDone = false;
-    this.testDeck = [];
+    this.testDeck = shuffle(this.cfg.testQuestions)
+      .slice(0, Math.min(5, this.cfg.testQuestions.length))
+      .map((q) => randomizeQuestion(q, this.difficulty));
+    this.testIdx = 0;
+    this.testScore = 0;
     this.overlay = null;
     this.p.x = this.goalX - 96;
     this.p.vx = 0;
@@ -616,7 +656,7 @@ export class GameEngine {
     if (c === "Q") {
       this.rows[ty][tx] = "X";
       audio.sfx("bump");
-      if (this.bumpDeck.length === 0) this.bumpDeck = shuffle(this.cfg.pool);
+      if (this.bumpDeck.length === 0) this.bumpDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
       const q = this.bumpDeck.pop();
       if (!q) {
         this.addCoins(2);
@@ -624,7 +664,7 @@ export class GameEngine {
         this.popText(tx * TILE, ty * TILE - 4, "+50", "#fde047");
         return;
       }
-      this.overlay = { kind: "quiz", mode: "bump", title: "Bloque de pregunta", q, step: 1, total: 1, answered: null };
+      this.overlay = { kind: "quiz", mode: "bump", title: "Bloque de pregunta", q: randomizeQuestion(q, this.difficulty), step: 1, total: 1, answered: null };
     } else if (c === "B") {
       this.rows[ty][tx] = "X";
       audio.sfx("bump");
@@ -801,7 +841,7 @@ export class GameEngine {
       this.winBoss();
       return;
     }
-    if (this.bossDeck.length === 0) this.bossDeck = shuffle(this.cfg.pool);
+    if (this.bossDeck.length === 0) this.bossDeck = shuffle(this.cfg.pool).map((q) => randomizeQuestion(q, this.difficulty));
     const q = this.bossDeck.pop();
     if (!q) {
       b.hp = 0;
@@ -812,7 +852,7 @@ export class GameEngine {
       kind: "quiz",
       mode: "boss",
       title: this.cfg.bossName,
-      q,
+      q: randomizeQuestion(q, this.difficulty),
       step: b.max - b.hp + 1,
       total: b.max,
       answered: null,
@@ -859,7 +899,7 @@ export class GameEngine {
       audio.sfx("win");
       return;
     }
-    this.testDeck = shuffle(pool).slice(0, Math.min(5, pool.length));
+    this.testDeck = shuffle(pool).slice(0, Math.min(5, pool.length)).map((q) => randomizeQuestion(q, this.difficulty));
     this.testIdx = 0;
     this.testScore = 0;
     this.overlay = {
@@ -906,10 +946,11 @@ export class GameEngine {
     const p = this.p;
     const blinkOff = p.inv > 0 && Math.floor(this.t / 4) % 2 === 0;
     if (!blinkOff) {
-      R.drawPerson(g, p.x + 5, p.y + PH, R.PLAYER_LOOK, {
+      const state = p.punch > 0 ? "punch" : !p.onGround ? "jump" : Math.abs(p.vx) > 0.1 ? "walk" : "idle";
+      R.drawPlayer(g, p.x + 5, p.y + PH, {
         flip: p.facing < 0,
-        frame: p.onGround ? p.frame : 0,
-        arm: p.punch > 0,
+        state,
+        t: this.t,
         hurt: p.inv > 60,
       });
     }

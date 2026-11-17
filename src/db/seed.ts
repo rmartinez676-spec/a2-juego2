@@ -1,5 +1,5 @@
 import { count } from "drizzle-orm";
-import { db } from "@/db";
+import { db, hasDb } from "@/db";
 import { blocks, boeSources, questions, topics } from "@/db/schema";
 import { BOE_SOURCES, SYLLABUS } from "@/game/content/syllabus";
 
@@ -7,6 +7,7 @@ let seedPromise: Promise<void> | null = null;
 
 // Inserta el temario inicial la primera vez que se usa la base de datos.
 export function ensureSeed(): Promise<void> {
+  if (!hasDb || !db) return Promise.resolve();
   if (!seedPromise) {
     seedPromise = doSeed().catch((error: unknown) => {
       seedPromise = null;
@@ -17,7 +18,9 @@ export function ensureSeed(): Promise<void> {
 }
 
 async function doSeed(): Promise<void> {
+  if (!hasDb || !db) return;
   const [{ value }] = await db.select({ value: count() }).from(blocks);
+
   if (Number(value) > 0) return;
 
   await db.transaction(async (tx) => {

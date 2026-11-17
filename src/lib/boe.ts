@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { db, hasDb } from "@/db";
 import { boeSources, topics } from "@/db/schema";
+import { BOE_SOURCES } from "@/game/content/syllabus";
 
 // API de datos abiertos del BOE (legislación consolidada).
 // Nota: el endpoint de metadatos/análisis responde en JSON con Accept: application/json.
@@ -52,8 +53,41 @@ export function isValidBoeId(id: string): boolean {
 // Sincroniza todas las fuentes BOE: fecha de actualización y número de normas que las modifican.
 // Si cambian respecto a la última revisión, marca como "revisar" los temas vinculados.
 export async function syncBoeSources(): Promise<SyncResult[]> {
+  if (!hasDb || !db) {
+    const results: SyncResult[] = [];
+    for (const source of BOE_SOURCES) {
+      try {
+        const meta = await getJson<BoeMetaJson>(`${BASE}${source.boeId}/metadatos`);
+        const info = meta.data?.[0];
+        const analysis = await getJson<BoeAnalysisJson>(`${BASE}${source.boeId}/analisis`);
+        const reforms: Array<{ id_norma?: string }> = [];
+        for (const group of analysis.data?.[0]?.referencias?.posteriores ?? []) {
+          for (const item of group.posterior ?? []) reforms.push(item);
+        }
+        results.push({
+          boeId: source.boeId,
+          ok: true,
+          title: info?.titulo ?? source.shortName,
+          lastUpdate: info?.fecha_actualizacion ?? undefined,
+          reformCount: reforms.length,
+          changed: false,
+          flaggedTopics: 0,
+          latestReform: reforms[0]?.id_norma ?? null,
+        });
+      } catch (error) {
+        results.push({
+          boeId: source.boeId,
+          ok: false,
+          error: error instanceof Error ? error.message : "Error desconocido",
+        });
+      }
+    }
+    return results;
+  }
+
   const sources = await db.select().from(boeSources);
   const allTopics = await db.select().from(topics);
+
   const results: SyncResult[] = [];
 
   for (const source of sources) {

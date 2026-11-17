@@ -1,4 +1,4 @@
-import type { EngineConfig, QuestionLite } from "./engine";
+import type { Difficulty, EngineConfig, QuestionLite } from "./engine";
 import { HUB_NPCS, TUTORIAL_TITLE } from "./content/syllabus";
 import { THEMES, variantMusic } from "./themes";
 import type { BossStyle } from "./themes";
@@ -52,8 +52,8 @@ export function buildStages(data: GameData): Stage[] {
     blockNumber: 7,
     blockId: 0,
     topicId: null,
-    title: "Examen Final",
-    subtitle: "Tribunal Calificador · todo el temario",
+    title: "Examen Final de la Oposición",
+    subtitle: "Tribunal Calificador · todo el temario A2",
   });
   return stages;
 }
@@ -63,13 +63,14 @@ export function isStageUnlocked(stages: Stage[], index: number, completed: strin
   return completed.includes(stages[index - 1].key);
 }
 
-export function makeEngineConfig(stage: Stage, data: GameData): EngineConfig {
+export function makeEngineConfig(stage: Stage, data: GameData, difficulty: Difficulty = "normal"): EngineConfig {
   const allQuestions: QuestionLite[] = data.blocks.flatMap((b) => b.topics.flatMap((t) => t.questions));
   const block = data.blocks.find((b) => b.number === stage.blockNumber) ?? null;
   const themeKey = stage.kind === "exam" ? "tribunal" : stage.blockNumber === 0 ? "plaza" : block?.theme ?? "plaza";
   const theme = THEMES[themeKey] ?? THEMES.plaza;
   const seed = 1000 + stage.index * 7919;
   const base: Omit<EngineConfig, "mode"> = {
+    difficulty,
     seed,
     theme,
     title: stage.title,
@@ -77,7 +78,7 @@ export function makeEngineConfig(stage: Stage, data: GameData): EngineConfig {
     npcs: [],
     pool: [],
     testQuestions: [],
-    passMin: 3,
+    passMin: difficulty === "easy" ? 2 : 3,
     bossName: "",
     bossIntro: [],
     bossStyle: "quorum",
@@ -113,7 +114,7 @@ export function makeEngineConfig(stage: Stage, data: GameData): EngineConfig {
       npcs,
       pool: questions,
       testQuestions: questions,
-      passMin: 3,
+      passMin: difficulty === "easy" ? 2 : 3,
       music: variantMusic(theme.music, variant),
       musicId: `${themeKey}:topic:${variant}`,
     };
@@ -127,9 +128,9 @@ export function makeEngineConfig(stage: Stage, data: GameData): EngineConfig {
       seed,
       pool: blockQuestions,
       bossName: block?.bossName ?? "Jefe",
-      bossIntro: block ? [block.bossIntro, "Responde a mis preguntas: cada acierto me debilita, cada fallo te cuesta una vida."] : [],
+      bossIntro: block ? [block.bossIntro, "Responde a mis preguntas sobre este bloque: cada acierto me debilita, cada fallo te cuesta una vida."] : [],
       bossStyle: (block?.bossStyle ?? "quorum") as BossStyle,
-      bossHp: Math.min(6, blockQuestions.length),
+      bossHp: Math.min(difficulty === "easy" ? 4 : difficulty === "hard" ? 6 : 5, blockQuestions.length),
       music: theme.boss,
       musicId: `${themeKey}:boss`,
     };
@@ -140,14 +141,16 @@ export function makeEngineConfig(stage: Stage, data: GameData): EngineConfig {
     mode: "exam",
     theme: THEMES.tribunal,
     pool: allQuestions,
-    bossName: "Tribunal Calificador",
+    bossName: "Tribunal Calificador Supremo",
     bossIntro: [
-      "Bienvenida al examen final. Aquí se mezcla todo el temario.",
-      "Diez aciertos para aprobar esta simulación. ¡Concéntrate!",
+      "¡Bienvenida al Examen Final de Gestión de la Administración Civil del Estado, Lucía!",
+      "Aquí evaluamos el temario completo de los 6 bloques de la oposición.",
+      "Diez aciertos para obtener tu plaza en este simulacro oficial. ¡Demuestra todo lo estudiado!",
     ],
     bossStyle: "judge",
-    bossHp: Math.min(10, allQuestions.length),
+    bossHp: Math.min(difficulty === "easy" ? 7 : 10, allQuestions.length),
     music: THEMES.tribunal.boss,
-    musicId: "tribunal:exam",
+    musicId: "tribunal:final_boss",
   };
 }
+
