@@ -267,6 +267,8 @@ export class GameEngine {
     this.coins = 0;
     this.score = 0;
     this.overlay = null;
+    this.input = { left: false, right: false, jump: false, punch: false, interact: false };
+    this.prev = { left: false, right: false, jump: false, punch: false, interact: false };
     this.afterDialogue = null;
     this.gateDone = false;
     this.goalDone = false;
@@ -546,18 +548,18 @@ export class GameEngine {
     const dir = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
     if (p.knock > 0) {
       p.knock--;
-      p.vx = -p.facing * 1.4;
+      p.vx = -p.facing * 1.3;
     } else {
-      p.vx = dir * 1.6;
+      p.vx = dir * 1.35;
       if (dir !== 0) p.facing = dir > 0 ? 1 : -1;
     }
     if (pj && p.onGround) {
-      p.vy = -5.4;
+      p.vy = -5.2;
       p.onGround = false;
       audio.sfx("jump");
     }
     if (!this.input.jump && p.vy < -1.6) p.vy = -1.6;
-    p.vy = Math.min(p.vy + 0.3, 5.5);
+    p.vy = Math.min(p.vy + 0.28, 5.2);
     if (pp && p.cool <= 0) {
       p.punch = 10;
       p.cool = 20;

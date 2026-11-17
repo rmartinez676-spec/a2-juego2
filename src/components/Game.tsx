@@ -13,12 +13,12 @@ import WorldMap from "./WorldMap";
 import StudyHubModal from "./StudyHubModal";
 
 type Screen = "title" | "map" | "play";
-export type ControlMode = "runner" | "pad" | "touch";
+export type ControlMode = "pad" | "touch" | "runner";
 
 const PLAYER_KEY = "oposikid-player-id";
 const FREE_KEY = "oposikid-free-play";
 const DIFFICULTY_KEY = "oposikid-difficulty";
-const CONTROL_MODE_KEY = "oposikid-control-mode";
+const CONTROL_MODE_KEY = "oposikid-control-mode-v2"; // v2 para resetear modo runner previo
 
 const KEY_MAP: Record<string, keyof InputState> = {
   ArrowLeft: "left",
@@ -70,8 +70,9 @@ export default function Game({ data }: { data: GameData }) {
   const [muted, setMuted] = useState(false);
   const [musicMuted, setMusicMuted] = useState(false);
   const [touch, setTouch] = useState(false);
-  const [controlMode, setControlMode] = useState<ControlMode>("runner");
-  const [runnerDir, setRunnerDir] = useState<1 | -1>(1);
+  // Por defecto SIEMPRE mando manual: Lucía NO corre sola, se mueve solo al pulsar
+  const [controlMode, setControlMode] = useState<ControlMode>("pad");
+  const [activeDpad, setActiveDpad] = useState<"left" | "right" | "none">("none");
   const [isPortrait, setIsPortrait] = useState(false);
   const [fingerMarker, setFingerMarker] = useState<{ x: number; y: number; active: boolean; dir: -1 | 0 | 1 }>({
     x: 0,
@@ -98,12 +99,6 @@ export default function Game({ data }: { data: GameData }) {
     startY: number;
     startTime: number;
   }>({ active: false, pointerId: -1, startX: 0, startY: 0, startTime: 0 });
-  const runnerSwipeRef = useRef<{
-    startX: number;
-    startY: number;
-    startTime: number;
-    pointerId: number;
-  }>({ startX: 0, startY: 0, startTime: 0, pointerId: -1 });
 
   // Detección reactiva de orientación: vertical (portrait) vs horizontal (landscape)
   useEffect(() => {
@@ -154,10 +149,11 @@ export default function Game({ data }: { data: GameData }) {
         setDifficulty(savedDiff);
       }
       const savedMode = window.localStorage.getItem(CONTROL_MODE_KEY) as ControlMode | null;
-      if (savedMode === "runner" || savedMode === "pad" || savedMode === "touch") {
+      if (savedMode === "pad" || savedMode === "touch") {
         setControlMode(savedMode);
       } else {
-        setControlMode("runner");
+        // Por defecto SIEMPRE pad (mando manual, sin correr sola)
+        setControlMode("pad");
       }
     } catch {
       id = newPlayerId();
@@ -173,30 +169,8 @@ export default function Game({ data }: { data: GameData }) {
       .catch(() => {});
   }, []);
 
-  // Sincronización del Modo Mario Run (auto-carrera continua cuando no hay overlays)
-  useEffect(() => {
-    if (screen !== "play") return;
-    const eng = engineRef.current;
-    if (!eng) return;
-
-    if (controlMode === "runner") {
-      if (snap?.overlay) {
-        eng.input.right = false;
-        eng.input.left = false;
-        eng.input.jump = false;
-      } else {
-        if (runnerDir > 0) {
-          eng.input.right = true;
-          eng.input.left = false;
-        } else {
-          eng.input.left = true;
-          eng.input.right = false;
-        }
-      }
-    }
-  }, [controlMode, runnerDir, snap?.overlay, screen]);
-
   // Teclado (escritorio): flechas/WASD para moverse, espacio/↑ saltar, X/K golpear, E/Enter hablar.
+  // Lucía SOLO camina mientras mantienes pulsada la tecla. Al soltar se detiene al instante.
   useEffect(() => {
     const down = (ev: KeyboardEvent) => {
       if (screenRef.current !== "play") return;
@@ -230,6 +204,7 @@ export default function Game({ data }: { data: GameData }) {
       const eng = engineRef.current;
       if (!eng) return;
       eng.input = { left: false, right: false, jump: false, punch: false, interact: false };
+      setActiveDpad("none");
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -241,7 +216,7 @@ export default function Game({ data }: { data: GameData }) {
     };
   }, []);
 
-  // Motor: se crea al entrar en una fase y se destruye al salir, con la dificultad seleccionada
+  // Motor: se crea al entrar en una fase y se destruye al salir
   useEffect(() => {
     if (screen !== "play" || !stage || !canvasRef.current) return;
     const eng = new GameEngine(canvasRef.current, makeEngineConfig(stage, data, difficulty), (s) => {
@@ -249,19 +224,12 @@ export default function Game({ data }: { data: GameData }) {
       setSnap(s);
     });
     engineRef.current = eng;
-
-    // Si está en modo Mario Run, arrancar avanzando inmediatamente
-    if (controlMode === "runner") {
-      eng.input.right = runnerDir > 0;
-      eng.input.left = runnerDir < 0;
-    }
-
     eng.start();
     return () => {
       eng.destroy();
       if (engineRef.current === eng) engineRef.current = null;
     };
-  }, [screen, stage, data, difficulty, controlMode, runnerDir]);
+  }, [screen, stage, data, difficulty]);
 
   const setScreenBoth = (next: Screen) => {
     screenRef.current = next;
@@ -302,7 +270,6 @@ export default function Game({ data }: { data: GameData }) {
 
   const startStage = (s: Stage) => {
     unlockAudioAndScreen();
-    setRunnerDir(1);
     stageRef.current = s;
     snapRef.current = null;
     setSnap(null);
@@ -383,10 +350,10 @@ export default function Game({ data }: { data: GameData }) {
     }
   };
 
-  // Alternar entre los 3 modos de control: 🏃 Mario Run -> 🕹️ Mando Consola -> 👆 Táctil Libre
+  // Alternar modo de control (Mando manual clásico <-> Táctil libre <-> Carrera)
   const cycleControlMode = () => {
     setControlMode((prev) => {
-      const next: ControlMode = prev === "runner" ? "pad" : prev === "pad" ? "touch" : "runner";
+      const next: ControlMode = prev === "pad" ? "touch" : prev === "touch" ? "runner" : "pad";
       try {
         window.localStorage.setItem(CONTROL_MODE_KEY, next);
       } catch {}
@@ -396,107 +363,78 @@ export default function Game({ data }: { data: GameData }) {
         eng.input.right = false;
         eng.input.jump = false;
         if (next === "runner" && !snapRef.current?.overlay) {
-          eng.input.right = runnerDir > 0;
-          eng.input.left = runnerDir < 0;
-        }
-      }
-      return next;
-    });
-  };
-
-  // Invertir dirección en modo Mario Run (correr derecha <-> izquierda)
-  const toggleRunnerDir = () => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
-    } catch {}
-    setRunnerDir((prev) => {
-      const next = prev === 1 ? -1 : 1;
-      const eng = engineRef.current;
-      if (eng && controlMode === "runner" && !snapRef.current?.overlay) {
-        if (next > 0) {
           eng.input.right = true;
-          eng.input.left = false;
-        } else {
-          eng.input.left = true;
-          eng.input.right = false;
         }
       }
       return next;
     });
   };
 
-  // Acción rápida de puño/interactuar
-  const triggerPunch = () => {
-    const eng = engineRef.current;
-    if (!eng) return;
+  // Helper de entrada
+  const setKey = (k: keyof InputState, v: boolean) => {
+    if (engineRef.current) engineRef.current.input[k] = v;
+  };
+
+  // Manejador del D-Pad táctil continuo (◀ y ▶ ergonómicos)
+  // Permite deslizar o tocar suavemente sin perder el control
+  const handleDpadPointer = (clientX: number, targetRect: DOMRect) => {
+    const relX = clientX - targetRect.left;
+    const midX = targetRect.width / 2;
+    const deadZone = 14;
+
+    if (relX < midX - deadZone) {
+      setKey("left", true);
+      setKey("right", false);
+      setActiveDpad("left");
+    } else if (relX > midX + deadZone) {
+      setKey("right", true);
+      setKey("left", false);
+      setActiveDpad("right");
+    } else {
+      setKey("left", false);
+      setKey("right", false);
+      setActiveDpad("none");
+    }
+  };
+
+  const onDpadDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     try {
-      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
     } catch {}
-    eng.input.punch = true;
-    eng.input.interact = true;
-    setTimeout(() => {
-      if (engineRef.current) {
-        engineRef.current.input.punch = false;
-        engineRef.current.input.interact = false;
-      }
-    }, 150);
+    handleDpadPointer(e.clientX, e.currentTarget.getBoundingClientRect());
   };
 
-  // Toques en Modo Mario Run (1 toque = salto de altura variable, gestos de swipe)
-  const runnerTouchDown = (e: ReactPointerEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest(".no-runner-jump") || snapRef.current?.overlay) return;
+  const onDpadMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    handleDpadPointer(e.clientX, e.currentTarget.getBoundingClientRect());
+  };
 
-    runnerSwipeRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startTime: Date.now(),
-      pointerId: e.pointerId,
-    };
+  const onDpadUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    setKey("left", false);
+    setKey("right", false);
+    setActiveDpad("none");
+  };
 
-    const eng = engineRef.current;
-    if (eng) {
+  // Botón táctil individual con retroalimentación inmediata
+  const touchButton = (k: keyof InputState) => ({
+    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
       try {
-        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(12);
+        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
       } catch {}
-      eng.input.jump = true;
-    }
-  };
-
-  const runnerTouchUp = (e: ReactPointerEvent) => {
-    if (runnerSwipeRef.current.pointerId !== -1 && e.pointerId !== runnerSwipeRef.current.pointerId) return;
-
-    const dx = e.clientX - runnerSwipeRef.current.startX;
-    const dy = e.clientY - runnerSwipeRef.current.startY;
-    const dt = Date.now() - runnerSwipeRef.current.startTime;
-
-    // Gestos rápidos (swipes)
-    if (dt < 350 && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.3) {
-      if (dx < 0) {
-        // Deslizar a la izquierda -> girar a la izquierda
-        setRunnerDir(-1);
-        if (engineRef.current) {
-          engineRef.current.input.left = true;
-          engineRef.current.input.right = false;
-        }
-      } else {
-        // Deslizar a la derecha -> girar a la derecha
-        setRunnerDir(1);
-        if (engineRef.current) {
-          engineRef.current.input.right = true;
-          engineRef.current.input.left = false;
-        }
-      }
-    } else if (dt < 250 && Math.hypot(dx, dy) < 20 && e.clientY - runnerSwipeRef.current.startY > 30) {
-      // Swipe hacia abajo -> Puño
-      triggerPunch();
-    }
-
-    if (engineRef.current) {
-      engineRef.current.input.jump = false;
-    }
-    runnerSwipeRef.current.pointerId = -1;
-  };
+      setKey(k, true);
+    },
+    onPointerUp: () => setKey(k, false),
+    onPointerLeave: () => setKey(k, false),
+    onPointerCancel: () => setKey(k, false),
+    onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
+  });
 
   // Modo Táctil Libre (arrastrar dedo por pantalla)
   const updateFingerSteer = (clientX: number, clientY: number) => {
@@ -518,11 +456,11 @@ export default function Game({ data }: { data: GameData }) {
     const diffY = canvasY - luciaY;
 
     let dir: -1 | 0 | 1 = 0;
-    if (diffX > 22) {
+    if (diffX > 20) {
       eng.input.right = true;
       eng.input.left = false;
       dir = 1;
-    } else if (diffX < -22) {
+    } else if (diffX < -20) {
       eng.input.left = true;
       eng.input.right = false;
       dir = -1;
@@ -532,7 +470,7 @@ export default function Game({ data }: { data: GameData }) {
       dir = 0;
     }
 
-    if (diffY < -32 || (touchSteerRef.current.startY - clientY) > 28) {
+    if (diffY < -30 || (touchSteerRef.current.startY - clientY) > 28) {
       eng.input.jump = true;
     } else {
       eng.input.jump = false;
@@ -571,8 +509,15 @@ export default function Game({ data }: { data: GameData }) {
     const duration = Date.now() - touchSteerRef.current.startTime;
     const dist = Math.hypot(e.clientX - touchSteerRef.current.startX, e.clientY - touchSteerRef.current.startY);
 
-    if (duration < 280 && dist < 25 && eng) {
-      triggerPunch();
+    if (duration < 250 && dist < 20 && eng) {
+      eng.input.punch = true;
+      eng.input.interact = true;
+      setTimeout(() => {
+        if (engineRef.current) {
+          engineRef.current.input.punch = false;
+          engineRef.current.input.interact = false;
+        }
+      }, 140);
     }
 
     touchSteerRef.current.active = false;
@@ -584,24 +529,6 @@ export default function Game({ data }: { data: GameData }) {
       eng.input.jump = false;
     }
   };
-
-  const setKey = (k: keyof InputState, v: boolean) => {
-    if (engineRef.current) engineRef.current.input[k] = v;
-  };
-
-  const touchButton = (k: keyof InputState) => ({
-    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      try {
-        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
-      } catch {}
-      setKey(k, true);
-    },
-    onPointerUp: () => setKey(k, false),
-    onPointerLeave: () => setKey(k, false),
-    onPointerCancel: () => setKey(k, false),
-    onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
-  });
 
   const playing = screen === "play";
 
@@ -664,16 +591,16 @@ export default function Game({ data }: { data: GameData }) {
           /* ============================================================== */
           /* MODO VERTICAL / RETRATO (Móvil y Tablet estilo Nintendo DS):  */
           /* Arriba: Pantalla 16:9 limpia sin botones tapando a Lucía      */
-          /* Abajo: Consola táctil ergonómica / Modo Mario Run (1 dedo)    */
+          /* Abajo: Consola táctil con cruceta ◀ ▶ y botones grandes       */
           /* ============================================================== */
           <div className="relative h-full w-full overflow-hidden flex flex-col justify-between bg-slate-950 select-none">
-            {/* PANTALLA SUPERIOR: Canvas de juego 16:9 limpio */}
+            {/* PANTALLA SUPERIOR: Canvas de juego 16:9 100% despejado */}
             <div
               className="relative w-full aspect-[16/9] flex-none bg-black shadow-2xl overflow-hidden [container-type:inline-size]"
-              onPointerDown={controlMode === "runner" ? runnerTouchDown : controlMode === "touch" ? handlePointerDownGame : undefined}
+              onPointerDown={controlMode === "touch" ? handlePointerDownGame : undefined}
               onPointerMove={controlMode === "touch" ? handlePointerMoveGame : undefined}
-              onPointerUp={controlMode === "runner" ? runnerTouchUp : controlMode === "touch" ? handlePointerUpGame : undefined}
-              onPointerCancel={controlMode === "runner" ? runnerTouchUp : controlMode === "touch" ? handlePointerUpGame : undefined}
+              onPointerUp={controlMode === "touch" ? handlePointerUpGame : undefined}
+              onPointerCancel={controlMode === "touch" ? handlePointerUpGame : undefined}
             >
               <canvas
                 ref={canvasRef}
@@ -696,12 +623,12 @@ export default function Game({ data }: { data: GameData }) {
               )}
 
               {/* HUD Superior Limpio */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-1.5 p-1.5">
+              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-1.5 p-1.5 z-10">
                 <div className="rounded-lg bg-black/75 backdrop-blur-md px-2 py-0.5 text-white border border-white/10">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300 truncate max-w-[140px]">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300 truncate max-w-[130px]">
                     {snap?.subtitle ?? stage.subtitle}
                   </p>
-                  <p className="text-xs font-black leading-tight truncate max-w-[140px]">
+                  <p className="text-xs font-black leading-tight truncate max-w-[130px]">
                     {snap?.title ?? stage.title}
                   </p>
                 </div>
@@ -727,14 +654,6 @@ export default function Game({ data }: { data: GameData }) {
                   <span className="text-yellow-300">💶 {snap?.coins ?? 0}</span>
                   <button
                     type="button"
-                    onClick={cycleControlMode}
-                    className="cursor-pointer rounded bg-amber-500/35 border border-amber-400/50 px-2 py-0.5 text-[11px] font-black text-amber-200 hover:bg-amber-500/50 active:scale-95 transition"
-                    title="Alternar modo de control"
-                  >
-                    {controlMode === "runner" ? "🏃 Mario Run" : controlMode === "pad" ? "🕹️ Mando" : "👆 Táctil"}
-                  </button>
-                  <button
-                    type="button"
                     onClick={toggleMute}
                     className="cursor-pointer rounded bg-white/15 px-1 py-0.5 text-xs hover:bg-white/30"
                   >
@@ -751,142 +670,71 @@ export default function Game({ data }: { data: GameData }) {
               </div>
             </div>
 
-            {/* CONSOLA INFERIOR: Controlador dedicado fuera del área de juego */}
+            {/* CONSOLA INFERIOR: Controlador ergonómico donde descansan los pulgares */}
             <div className="flex-1 w-full min-h-0 flex flex-col justify-between p-3 bg-gradient-to-b from-slate-900 via-slate-950 to-black border-t-2 border-amber-500/30 select-none touch-none">
-              {controlMode === "runner" && (
-                <div className="flex-1 w-full flex flex-col justify-between py-1">
-                  {/* Tarjeta gigante de salto para jugar con 1 dedo */}
-                  <div
-                    onPointerDown={runnerTouchDown}
-                    onPointerUp={runnerTouchUp}
-                    onPointerCancel={runnerTouchUp}
-                    className="flex-1 w-full rounded-2xl bg-gradient-to-br from-emerald-600/30 via-emerald-500/15 to-teal-800/30 border-2 border-emerald-400/60 p-3 flex flex-col items-center justify-center active:bg-emerald-500/40 active:border-emerald-300 active:scale-[0.99] transition shadow-[0_0_25px_rgba(16,185,129,0.2)]"
-                  >
-                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-500/40 border-3 border-emerald-300 flex items-center justify-center shadow-lg animate-pulse mb-1.5">
-                      <span className="text-3xl font-black text-white">⬆</span>
-                    </div>
-                    <p className="text-base sm:text-lg font-black text-white uppercase tracking-wider text-center">
-                      TOCA EN CUALQUIER LUGAR PARA SALTAR
-                    </p>
-                    <p className="text-xs text-emerald-200 mt-0.5 text-center font-medium">
-                      Modo Mario Run · Mantén pulsado para saltar más alto
-                    </p>
-                  </div>
-
-                  {/* Barra inferior de acciones auxiliares */}
-                  <div className="mt-2.5 flex items-center justify-between gap-2 px-1">
-                    <button
-                      type="button"
-                      onClick={toggleRunnerDir}
-                      className="flex-1 h-12 rounded-xl bg-slate-800 border-2 border-slate-600 text-xs font-black text-amber-200 flex items-center justify-center gap-1 active:bg-slate-700 active:scale-95 transition shadow"
-                    >
-                      <span>🔄</span> Girar {runnerDir > 0 ? "▶ Der" : "◀ Izq"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={triggerPunch}
-                      className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 border-2 border-orange-300 text-xs font-black text-slate-950 flex items-center justify-center gap-1 active:brightness-110 active:scale-95 transition shadow"
-                    >
-                      <span>👊</span> Puño / Golpear
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cycleControlMode}
-                      className="h-12 px-3 rounded-xl bg-white/10 border border-white/20 text-xs font-bold text-slate-300 hover:bg-white/20 active:scale-95 transition"
-                      title="Cambiar a mando cruceta o libre"
-                    >
-                      🕹️ Mando
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {controlMode === "pad" && (
-                <div className="flex-1 w-full flex flex-col justify-between py-1">
-                  {/* Deck de Consola: Cruceta a la izquierda, botones A/B a la derecha */}
-                  <div className="flex-1 w-full flex items-center justify-between px-2">
-                    {/* Cruceta Izquierda */}
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        type="button"
-                        {...touchButton("left")}
-                        className="h-16 w-16 rounded-2xl bg-slate-800 border-2 border-slate-600 text-3xl font-black text-white active:bg-amber-500 active:border-amber-300 active:scale-95 transition shadow-lg flex items-center justify-center"
-                      >
-                        ◀
-                      </button>
-                      <button
-                        type="button"
-                        {...touchButton("right")}
-                        className="h-16 w-16 rounded-2xl bg-slate-800 border-2 border-slate-600 text-3xl font-black text-white active:bg-amber-500 active:border-amber-300 active:scale-95 transition shadow-lg flex items-center justify-center"
-                      >
-                        ▶
-                      </button>
-                    </div>
-
-                    {/* Botones de Acción Derecha */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        {...touchButton("punch")}
-                        className="h-13 w-13 rounded-full bg-orange-500/90 border-2 border-orange-300 text-[10px] font-black text-white active:bg-orange-400 active:scale-95 transition shadow-lg flex items-center justify-center"
-                      >
-                        PUÑO
-                      </button>
-                      <button
-                        type="button"
-                        {...touchButton("interact")}
-                        className="h-13 w-13 rounded-full bg-sky-500/90 border-2 border-sky-300 text-[10px] font-black text-white active:bg-sky-400 active:scale-95 transition shadow-lg flex items-center justify-center"
-                      >
-                        HABLAR
-                      </button>
-                      <button
-                        type="button"
-                        {...touchButton("jump")}
-                        className="h-18 w-18 rounded-full bg-emerald-500 border-3 border-emerald-300 text-sm font-black text-slate-950 active:bg-emerald-400 active:scale-95 transition shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center justify-center"
-                      >
-                        SALTAR
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Barra de estado inferior */}
-                  <div className="mt-2 flex items-center justify-between px-2 pt-1 border-t border-white/10 text-xs text-slate-400">
-                    <span>🕹️ Mando Abajo (Nintendo DS style)</span>
-                    <button
-                      type="button"
-                      onClick={cycleControlMode}
-                      className="text-amber-300 font-bold hover:underline"
-                    >
-                      Probar 🏃 Mario Run (1 Dedo)
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {controlMode === "touch" && (
+              <div className="flex-1 w-full flex items-center justify-between px-2 py-2">
+                {/* Cruceta Ergonómica Izquierda (Touch Slider continuo) */}
                 <div
-                  onPointerDown={handlePointerDownGame}
-                  onPointerMove={handlePointerMoveGame}
-                  onPointerUp={handlePointerUpGame}
-                  onPointerCancel={handlePointerUpGame}
-                  className="flex-1 w-full rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900 border-2 border-indigo-400/40 p-4 flex flex-col items-center justify-center select-none touch-none shadow-inner"
+                  onPointerDown={onDpadDown}
+                  onPointerMove={onDpadMove}
+                  onPointerUp={onDpadUp}
+                  onPointerCancel={onDpadUp}
+                  className="h-20 w-44 rounded-2xl bg-slate-800/90 border-2 border-slate-600 p-1 flex items-center justify-between shadow-xl touch-none select-none active:border-amber-400"
                 >
-                  <div className="h-14 w-14 rounded-full bg-indigo-500/30 border-2 border-indigo-300 flex items-center justify-center text-2xl mb-1.5 animate-bounce">
-                    👆
+                  <div
+                    className={`flex-1 h-full rounded-xl flex items-center justify-center text-3xl font-black transition ${
+                      activeDpad === "left"
+                        ? "bg-amber-400 text-slate-950 shadow-inner scale-95"
+                        : "text-slate-200"
+                    }`}
+                  >
+                    ◀
                   </div>
-                  <p className="text-sm font-black text-white text-center">ZONA TÁCTIL LIBRE</p>
-                  <p className="text-xs text-indigo-200 mt-0.5 text-center">
-                    Arrastra el dedo para guiar a Lucía · Toca arriba para saltar · Toque rápido para puño
-                  </p>
+                  <div className="w-1 h-8 bg-slate-600/50 rounded-full" />
+                  <div
+                    className={`flex-1 h-full rounded-xl flex items-center justify-center text-3xl font-black transition ${
+                      activeDpad === "right"
+                        ? "bg-amber-400 text-slate-950 shadow-inner scale-95"
+                        : "text-slate-200"
+                    }`}
+                  >
+                    ▶
+                  </div>
+                </div>
+
+                {/* Botones de Acción Derecha */}
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={cycleControlMode}
-                    className="mt-2.5 px-3 py-1 rounded-lg bg-white/15 text-xs font-bold text-amber-200 hover:bg-white/25 transition"
+                    {...touchButton("punch")}
+                    className="h-14 w-14 rounded-full bg-orange-500/90 border-2 border-orange-300 text-[10px] font-black text-white active:bg-orange-400 active:scale-95 transition shadow-lg flex items-center justify-center"
                   >
-                    Cambiar a 🏃 Mario Run
+                    PUÑO
+                  </button>
+                  <button
+                    type="button"
+                    {...touchButton("interact")}
+                    className="h-14 w-14 rounded-full bg-sky-500/90 border-2 border-sky-300 text-[10px] font-black text-white active:bg-sky-400 active:scale-95 transition shadow-lg flex items-center justify-center"
+                  >
+                    HABLAR
+                  </button>
+                  <button
+                    type="button"
+                    {...touchButton("jump")}
+                    className="h-20 w-20 rounded-full bg-emerald-500 border-3 border-emerald-300 text-sm font-black text-slate-950 active:bg-emerald-400 active:scale-95 transition shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center justify-center"
+                  >
+                    SALTAR
                   </button>
                 </div>
-              )}
+              </div>
+
+              {/* Barra de estado inferior */}
+              <div className="flex items-center justify-between px-2 pt-1 border-t border-white/10 text-xs text-slate-400">
+                <span>🕹️ Mando Táctil Manual</span>
+                <span className="text-[11px] text-slate-400">
+                  Mantén para caminar · Pulsa SALTAR para brincar
+                </span>
+              </div>
             </div>
 
             {/* Overlays modales para preguntas, diálogos y resultados */}
@@ -908,13 +756,15 @@ export default function Game({ data }: { data: GameData }) {
         {playing && stage && !isPortrait && (
           /* ============================================================== */
           /* MODO HORIZONTAL / APAISADO (Widescreen 16:9)                    */
+          /* En ordenador: Controles limpios de teclado sin botones estorbo */
+          /* En tablet/móvil: Botones en las esquinas inferiores            */
           /* ============================================================== */
           <div
-            className="relative h-full w-full overflow-hidden flex flex-col justify-center items-center touch-none select-none"
-            onPointerDown={controlMode === "runner" ? runnerTouchDown : controlMode === "touch" ? handlePointerDownGame : undefined}
+            className="relative h-full w-full overflow-hidden flex flex-col justify-center items-center select-none"
+            onPointerDown={controlMode === "touch" ? handlePointerDownGame : undefined}
             onPointerMove={controlMode === "touch" ? handlePointerMoveGame : undefined}
-            onPointerUp={controlMode === "runner" ? runnerTouchUp : controlMode === "touch" ? handlePointerUpGame : undefined}
-            onPointerCancel={controlMode === "runner" ? runnerTouchUp : controlMode === "touch" ? handlePointerUpGame : undefined}
+            onPointerUp={controlMode === "touch" ? handlePointerUpGame : undefined}
+            onPointerCancel={controlMode === "touch" ? handlePointerUpGame : undefined}
           >
             <div className="relative w-full aspect-[16/9] max-h-full overflow-hidden shadow-2xl flex items-center justify-center [container-type:inline-size]">
               <canvas
@@ -967,14 +817,6 @@ export default function Game({ data }: { data: GameData }) {
                 <span className="text-sky-200">★ {snap?.score ?? 0}</span>
                 <button
                   type="button"
-                  onClick={cycleControlMode}
-                  className="cursor-pointer rounded bg-amber-500/35 border border-amber-400/40 px-[1cqw] py-[0.3cqw] text-xs sm:text-[1.6cqw] font-bold text-amber-200 hover:bg-amber-500/50 transition shadow-sm"
-                  title="Alternar modo de control"
-                >
-                  {controlMode === "runner" ? "🏃 Mario Run" : controlMode === "pad" ? "🕹️ Mando" : "👆 Táctil"}
-                </button>
-                <button
-                  type="button"
                   onClick={toggleMute}
                   aria-label={muted ? "Activar efectos" : "Silenciar efectos"}
                   className="cursor-pointer rounded bg-white/15 px-[0.8cqw] py-[0.2cqw] hover:bg-white/30"
@@ -1018,21 +860,21 @@ export default function Game({ data }: { data: GameData }) {
               </div>
             </div>
 
-            {/* Controles en pantalla en modo Pad en Horizontal */}
-            {controlMode === "pad" && touch && !snap?.overlay && (
+            {/* Controles táctiles solo en dispositivos táctiles (móvil/tablet horizontal) */}
+            {touch && !snap?.overlay && (
               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-[1.5cqw] pointer-events-none z-20">
                 <div className="flex gap-[1.5cqw] pointer-events-auto">
                   <button
                     type="button"
                     {...touchButton("left")}
-                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
+                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-amber-400 active:text-slate-950"
                   >
                     ◀
                   </button>
                   <button
                     type="button"
                     {...touchButton("right")}
-                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
+                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-amber-400 active:text-slate-950"
                   >
                     ▶
                   </button>
@@ -1041,57 +883,25 @@ export default function Game({ data }: { data: GameData }) {
                   <button
                     type="button"
                     {...touchButton("interact")}
-                    className="touch-none h-10 w-10 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-sky-400/50 text-[11px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-sky-300/70"
+                    className="touch-none h-11 w-11 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-sky-400/50 text-[10px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-sky-300/70"
                   >
                     HABLAR
                   </button>
                   <button
                     type="button"
                     {...touchButton("punch")}
-                    className="touch-none h-10 w-10 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-orange-400/50 text-[11px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-orange-300/70"
+                    className="touch-none h-11 w-11 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-orange-400/50 text-[10px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-orange-300/70"
                   >
                     PUÑO
                   </button>
                   <button
                     type="button"
                     {...touchButton("jump")}
-                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-emerald-400/60 text-base sm:text-[2.4cqw] font-black text-white shadow-lg backdrop-blur-sm active:bg-emerald-300/80"
+                    className="touch-none h-16 w-16 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-emerald-400/70 text-sm sm:text-[2.4cqw] font-black text-white shadow-lg backdrop-blur-sm active:bg-emerald-300/90"
                   >
                     SALTAR
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Controles auxiliares en modo Mario Run en Horizontal */}
-            {controlMode === "runner" && touch && !snap?.overlay && (
-              <div className="absolute bottom-3 inset-x-4 flex items-center justify-between pointer-events-none z-20">
-                <button
-                  type="button"
-                  onClick={toggleRunnerDir}
-                  className="pointer-events-auto h-11 px-3.5 rounded-xl bg-black/70 backdrop-blur-md border border-amber-400/50 text-xs font-black text-amber-200 active:scale-95 transition shadow-lg flex items-center gap-1"
-                >
-                  <span>🔄</span> Girar {runnerDir > 0 ? "▶" : "◀"}
-                </button>
-                <div className="pointer-events-none rounded-full bg-black/60 backdrop-blur-md px-4 py-1 text-xs text-emerald-200 border border-emerald-400/30">
-                  🏃 Mario Run: Toca cualquier lugar para saltar
-                </div>
-                <button
-                  type="button"
-                  onClick={triggerPunch}
-                  className="pointer-events-auto h-11 px-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 backdrop-blur-md border border-orange-300 text-xs font-black text-slate-950 active:scale-95 transition shadow-lg flex items-center gap-1"
-                >
-                  <span>👊</span> Puño
-                </button>
-              </div>
-            )}
-
-            {/* Aviso breve de modo Dedo cuando está en modo libre */}
-            {controlMode === "touch" && touch && !snap?.overlay && (
-              <div className="pointer-events-none absolute bottom-2 inset-x-0 flex justify-center z-20">
-                <span className="rounded-full bg-black/60 backdrop-blur-sm px-4 py-1 text-xs text-amber-200/90 shadow border border-amber-400/20">
-                  👆 Modo Dedo: arrastra en pantalla para guiar a Lucía · toca arriba para saltar
-                </span>
               </div>
             )}
 
@@ -1110,7 +920,7 @@ export default function Game({ data }: { data: GameData }) {
           </div>
         )}
 
-        {/* Modal de Estudio: Simulacro INAP, Duelo de Plazos y BOE */}
+        {/* Modal de Estudio: Simulacro INAP, Duelo de Plazos, Ráfaga Verdadero/Falso y BOE */}
         <StudyHubModal
           data={data}
           isOpen={studyHubOpen}
