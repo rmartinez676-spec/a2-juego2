@@ -70,6 +70,14 @@ export default function Game({ data }: { data: GameData }) {
   const [muted, setMuted] = useState(false);
   const [musicMuted, setMusicMuted] = useState(false);
   const [touch, setTouch] = useState(false);
+  const [touchKeysVisible, setTouchKeysVisible] = useState(true);
+  const [isPortrait, setIsPortrait] = useState(false);
+  const [fingerMarker, setFingerMarker] = useState<{ x: number; y: number; active: boolean; dir: -1 | 0 | 1 }>({
+    x: 0,
+    y: 0,
+    active: false,
+    dir: 0,
+  });
   const [stage, setStage] = useState<Stage | null>(null);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>({ width: 960, height: 540 });
@@ -82,20 +90,38 @@ export default function Game({ data }: { data: GameData }) {
   const stageRef = useRef<Stage | null>(null);
   const playerIdRef = useRef("");
   const handlersRef = useRef<{ advance: () => void; backToMap: () => void }>({ advance: () => {}, backToMap: () => {} });
+  const touchSteerRef = useRef<{
+    active: boolean;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startTime: number;
+  }>({ active: false, pointerId: -1, startX: 0, startY: 0, startTime: 0 });
 
-  // Ajuste reactivo al tamaño de pantalla móvil horizontal sin cortes
+  // Ajuste reactivo al tamaño de pantalla: soporta tanto apaisado (horizontal) como vertical (portrait)
   useEffect(() => {
     const updateSize = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const targetRatio = 16 / 9;
-      let w = vw;
-      let h = w / targetRatio;
-      if (h > vh) {
-        h = vh;
-        w = h * targetRatio;
+      const portrait = vh > vw;
+      setIsPortrait(portrait);
+
+      if (portrait) {
+        // En vertical (móvil/tablet): ancho completo y altura acorde a proporción 16:9
+        const w = vw;
+        const h = Math.floor(w / (16 / 9));
+        setViewportSize({ width: w, height: h });
+      } else {
+        // En horizontal (apaisado): contener en 16:9 sin desbordar la pantalla
+        const targetRatio = 16 / 9;
+        let w = vw;
+        let h = w / targetRatio;
+        if (h > vh) {
+          h = vh;
+          w = h * targetRatio;
+        }
+        setViewportSize({ width: Math.floor(w), height: Math.floor(h) });
       }
-      setViewportSize({ width: Math.floor(w), height: Math.floor(h) });
     };
     updateSize();
     window.addEventListener("resize", updateSize);
@@ -119,6 +145,10 @@ export default function Game({ data }: { data: GameData }) {
       const savedDiff = window.localStorage.getItem(DIFFICULTY_KEY) as Difficulty;
       if (savedDiff === "easy" || savedDiff === "normal" || savedDiff === "hard") {
         setDifficulty(savedDiff);
+      }
+      const savedKeys = window.localStorage.getItem("a2_touch_keys");
+      if (savedKeys !== null) {
+        setTouchKeysVisible(savedKeys === "1");
       }
     } catch {
       id = newPlayerId();
@@ -313,6 +343,109 @@ export default function Game({ data }: { data: GameData }) {
     }
   };
 
+  const toggleTouchKeys = () => {
+    setTouchKeysVisible((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("a2_touch_keys", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
+
+  const updateFingerSteer = (clientX: number, clientY: number) => {
+    const eng = engineRef.current;
+    const canvas = canvasRef.current;
+    if (!eng || !canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const relX = clientX - rect.left;
+    const relY = clientY - rect.top;
+
+    const canvasX = (relX / rect.width) * CANVAS_W;
+    const canvasY = (relY / rect.height) * CANVAS_H;
+
+    const luciaX = snapRef.current?.playerScreenX ?? CANVAS_W / 2;
+    const luciaY = snapRef.current?.playerScreenY ?? CANVAS_H / 2;
+
+    const diffX = canvasX - luciaX;
+    const diffY = canvasY - luciaY;
+
+    let dir: -1 | 0 | 1 = 0;
+    if (diffX > 22) {
+      eng.input.right = true;
+      eng.input.left = false;
+      dir = 1;
+    } else if (diffX < -22) {
+      eng.input.left = true;
+      eng.input.right = false;
+      dir = -1;
+    } else {
+      eng.input.left = false;
+      eng.input.right = false;
+      dir = 0;
+    }
+
+    if (diffY < -32 || (touchSteerRef.current.startY - clientY) > 28) {
+      eng.input.jump = true;
+    } else {
+      eng.input.jump = false;
+    }
+
+    setFingerMarker({ x: relX, y: relY, active: true, dir });
+  };
+
+  const handlePointerDownGame = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest(".no-finger-steer") || snapRef.current?.overlay) return;
+
+    const eng = engineRef.current;
+    if (!eng || !canvasRef.current) return;
+
+    touchSteerRef.current = {
+      active: true,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTime: Date.now(),
+    };
+
+    updateFingerSteer(e.clientX, e.clientY);
+  };
+
+  const handlePointerMoveGame = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!touchSteerRef.current.active || e.pointerId !== touchSteerRef.current.pointerId) return;
+    updateFingerSteer(e.clientX, e.clientY);
+  };
+
+  const handlePointerUpGame = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!touchSteerRef.current.active || e.pointerId !== touchSteerRef.current.pointerId) return;
+
+    const eng = engineRef.current;
+    const duration = Date.now() - touchSteerRef.current.startTime;
+    const dist = Math.hypot(e.clientX - touchSteerRef.current.startX, e.clientY - touchSteerRef.current.startY);
+
+    if (duration < 280 && dist < 25 && eng) {
+      eng.input.punch = true;
+      eng.input.interact = true;
+      setTimeout(() => {
+        if (engineRef.current) {
+          engineRef.current.input.punch = false;
+          engineRef.current.input.interact = false;
+        }
+      }, 180);
+    }
+
+    touchSteerRef.current.active = false;
+    setFingerMarker((prev) => ({ ...prev, active: false }));
+
+    if (eng) {
+      eng.input.left = false;
+      eng.input.right = false;
+      eng.input.jump = false;
+    }
+  };
+
   const setKey = (k: keyof InputState, v: boolean) => {
     if (engineRef.current) engineRef.current.input[k] = v;
   };
@@ -335,11 +468,11 @@ export default function Game({ data }: { data: GameData }) {
       <div
         className="game-frame relative overflow-hidden bg-black shadow-2xl [container-type:inline-size]"
         style={{
-          width: `${viewportSize.width}px`,
-          height: `${viewportSize.height}px`,
+          width: isPortrait && screen !== "play" ? "100vw" : `${viewportSize.width}px`,
+          height: isPortrait && screen !== "play" ? "100vh" : isPortrait ? "100vh" : `${viewportSize.height}px`,
           maxWidth: "100vw",
           maxHeight: "100vh",
-          aspectRatio: "16 / 9",
+          aspectRatio: isPortrait ? "auto" : "16 / 9",
         }}
       >
         {screen === "title" && (
@@ -386,25 +519,47 @@ export default function Game({ data }: { data: GameData }) {
         )}
 
         {playing && stage && (
-          <>
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_W}
-              height={CANVAS_H}
-              className="absolute inset-0 h-full w-full"
-            />
+          <div
+            className="relative h-full w-full overflow-hidden flex flex-col justify-center items-center touch-none select-none"
+            onPointerDown={handlePointerDownGame}
+            onPointerMove={handlePointerMoveGame}
+            onPointerUp={handlePointerUpGame}
+            onPointerCancel={handlePointerUpGame}
+          >
+            {/* Contenedor del Canvas con aspect-ratio 16/9 adaptativo */}
+            <div className="relative w-full aspect-[16/9] max-h-full overflow-hidden shadow-2xl flex items-center justify-center">
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_W}
+                height={CANVAS_H}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+
+              {/* Marcador visual al seguir con el dedo */}
+              {fingerMarker.active && (
+                <div
+                  className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                  style={{ left: `${fingerMarker.x}px`, top: `${fingerMarker.y}px` }}
+                >
+                  <div className="h-14 w-14 rounded-full border-2 border-amber-300/80 bg-amber-400/20 shadow-[0_0_15px_rgba(251,191,36,0.6)] animate-ping" />
+                  <div className="absolute h-9 w-9 rounded-full border-2 border-amber-200 bg-amber-500/50 shadow-md flex items-center justify-center text-xs font-black text-white">
+                    {fingerMarker.dir > 0 ? "▶" : fingerMarker.dir < 0 ? "◀" : "👆"}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* HUD */}
             <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-[1.5cqw] p-[1.2cqw]">
               <div className="rounded-md bg-black/60 backdrop-blur-sm px-[1.6cqw] py-[0.8cqw] text-white">
-                <p className="text-[1.8cqw] font-bold uppercase tracking-wider text-amber-300">
+                <p className="text-xs sm:text-[1.8cqw] font-bold uppercase tracking-wider text-amber-300">
                   {snap?.subtitle ?? stage.subtitle}
                 </p>
-                <p className="text-[2.3cqw] font-black leading-tight">{snap?.title ?? stage.title}</p>
+                <p className="text-sm sm:text-[2.3cqw] font-black leading-tight">{snap?.title ?? stage.title}</p>
               </div>
               {snap && snap.bossMax > 0 && (
                 <div className="rounded-md bg-black/60 backdrop-blur-sm px-[1.6cqw] py-[0.8cqw] text-white">
-                  <p className="text-[1.8cqw] font-black text-red-300">{snap.bossName}</p>
+                  <p className="text-xs sm:text-[1.8cqw] font-black text-red-300">{snap.bossName}</p>
                   <div className="mt-[0.4cqw] flex gap-[0.5cqw]">
                     {Array.from({ length: snap.bossMax }).map((_, i) => (
                       <span
@@ -417,12 +572,24 @@ export default function Game({ data }: { data: GameData }) {
                   </div>
                 </div>
               )}
-              <div className="pointer-events-auto flex items-center gap-[1cqw] rounded-md bg-black/60 backdrop-blur-sm px-[1.4cqw] py-[0.8cqw] text-[2cqw] font-bold text-white">
+              <div className="pointer-events-auto flex items-center gap-[0.8cqw] rounded-md bg-black/60 backdrop-blur-sm px-[1.2cqw] py-[0.6cqw] text-xs sm:text-[1.8cqw] font-bold text-white">
                 <span className="text-red-400">❤ {snap?.lives ?? 3}</span>
                 <span className="text-yellow-300">💶 {snap?.coins ?? 0}</span>
                 <span className="text-sky-200">★ {snap?.score ?? 0}</span>
+                <button
+                  type="button"
+                  onClick={toggleTouchKeys}
+                  className={`cursor-pointer rounded px-[1cqw] py-[0.3cqw] text-xs sm:text-[1.6cqw] font-bold transition shadow-sm ${
+                    touchKeysVisible
+                      ? "bg-amber-500/35 text-amber-200 border border-amber-400/40"
+                      : "bg-white/15 text-slate-300"
+                  }`}
+                  title="Alternar botones en pantalla (puedes jugar con botones o seguir con el dedo)"
+                >
+                  {touchKeysVisible ? "🎮 Teclas: ON" : "👆 Dedo (sin teclas)"}
+                </button>
                 <span
-                  className={`rounded px-[0.8cqw] py-[0.2cqw] text-[1.5cqw] font-black uppercase ${
+                  className={`rounded px-[0.8cqw] py-[0.2cqw] text-[1.4cqw] font-black uppercase ${
                     difficulty === "easy"
                       ? "bg-emerald-500/30 text-emerald-300"
                       : difficulty === "hard"
@@ -436,7 +603,7 @@ export default function Game({ data }: { data: GameData }) {
                   type="button"
                   onClick={toggleMute}
                   aria-label={muted ? "Activar efectos" : "Silenciar efectos"}
-                  className="cursor-pointer rounded bg-white/15 px-[1cqw] py-[0.2cqw] hover:bg-white/30"
+                  className="cursor-pointer rounded bg-white/15 px-[0.8cqw] py-[0.2cqw] hover:bg-white/30"
                   title="Efectos de sonido"
                 >
                   {muted ? "🔇" : "🔊"}
@@ -445,7 +612,7 @@ export default function Game({ data }: { data: GameData }) {
                   type="button"
                   onClick={toggleMusic}
                   aria-label={musicMuted ? "Activar música" : "Silenciar música"}
-                  className="cursor-pointer rounded bg-white/15 px-[1cqw] py-[0.2cqw] hover:bg-white/30"
+                  className="cursor-pointer rounded bg-white/15 px-[0.8cqw] py-[0.2cqw] hover:bg-white/30"
                   title="Música de fondo"
                 >
                   {musicMuted ? "🎵❌" : "🎵"}
@@ -462,7 +629,7 @@ export default function Game({ data }: { data: GameData }) {
                 <button
                   type="button"
                   onClick={() => setStudyHubOpen(true)}
-                  className="cursor-pointer rounded bg-sky-500/30 px-[1.2cqw] py-[0.3cqw] text-[1.8cqw] font-bold text-sky-200 hover:bg-sky-500/50"
+                  className="cursor-pointer rounded bg-sky-500/30 px-[1cqw] py-[0.3cqw] text-xs sm:text-[1.8cqw] font-bold text-sky-200 hover:bg-sky-500/50"
                   title="Abrir Aula INAP"
                 >
                   🏫 Aula
@@ -470,55 +637,64 @@ export default function Game({ data }: { data: GameData }) {
                 <button
                   type="button"
                   onClick={() => finish({ completed: false })}
-                  className="cursor-pointer rounded bg-white/15 px-[1.2cqw] py-[0.3cqw] text-[1.8cqw] hover:bg-white/30"
+                  className="cursor-pointer rounded bg-white/15 px-[1cqw] py-[0.3cqw] text-xs sm:text-[1.8cqw] hover:bg-white/30"
                 >
                   Mapa
                 </button>
               </div>
             </div>
 
-            {/* Controles táctiles */}
-            {touch && !snap?.overlay && (
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-[1.5cqw]">
-                <div className="flex gap-[1.5cqw]">
+            {/* Controles táctiles en pantalla (si están activados) */}
+            {touchKeysVisible && touch && !snap?.overlay && (
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-[1.5cqw] pointer-events-none z-20">
+                <div className="flex gap-[1.5cqw] pointer-events-auto">
                   <button
                     type="button"
                     {...touchButton("left")}
-                    className="touch-none h-[13cqw] w-[13cqw] rounded-full bg-white/25 text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
+                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
                   >
                     ◀
                   </button>
                   <button
                     type="button"
                     {...touchButton("right")}
-                    className="touch-none h-[13cqw] w-[13cqw] rounded-full bg-white/25 text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
+                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-white/25 text-2xl sm:text-[4cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-white/50"
                   >
                     ▶
                   </button>
                 </div>
-                <div className="flex items-end gap-[1.5cqw]">
+                <div className="flex items-end gap-[1.5cqw] pointer-events-auto">
                   <button
                     type="button"
                     {...touchButton("interact")}
-                    className="touch-none h-[9cqw] w-[9cqw] rounded-full bg-sky-400/50 text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-sky-300/70"
+                    className="touch-none h-10 w-10 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-sky-400/50 text-[11px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-sky-300/70"
                   >
                     HABLAR
                   </button>
                   <button
                     type="button"
                     {...touchButton("punch")}
-                    className="touch-none h-[9cqw] w-[9cqw] rounded-full bg-orange-400/50 text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-orange-300/70"
+                    className="touch-none h-10 w-10 sm:h-[9cqw] sm:w-[9cqw] rounded-full bg-orange-400/50 text-[11px] sm:text-[1.8cqw] font-bold text-white shadow-lg backdrop-blur-sm active:bg-orange-300/70"
                   >
                     PUÑO
                   </button>
                   <button
                     type="button"
                     {...touchButton("jump")}
-                    className="touch-none h-[13cqw] w-[13cqw] rounded-full bg-emerald-400/60 text-[2.4cqw] font-black text-white shadow-lg backdrop-blur-sm active:bg-emerald-300/80"
+                    className="touch-none h-14 w-14 sm:h-[13cqw] sm:w-[13cqw] rounded-full bg-emerald-400/60 text-base sm:text-[2.4cqw] font-black text-white shadow-lg backdrop-blur-sm active:bg-emerald-300/80"
                   >
                     SALTAR
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Aviso breve de modo Dedo cuando las teclas están ocultas */}
+            {!touchKeysVisible && touch && !snap?.overlay && (
+              <div className="pointer-events-none absolute bottom-2 inset-x-0 flex justify-center z-20">
+                <span className="rounded-full bg-black/60 backdrop-blur-sm px-4 py-1 text-xs text-amber-200/90 shadow border border-amber-400/20">
+                  👆 Modo Dedo: arrastra en pantalla para guiar a Lucía · toca arriba para saltar · toque rápido para golpear/hablar
+                </span>
               </div>
             )}
 
@@ -534,7 +710,7 @@ export default function Game({ data }: { data: GameData }) {
                 onExit={(r) => finish(r)}
               />
             )}
-          </>
+          </div>
         )}
 
         {/* Modal de Estudio: Simulacro INAP, Duelo de Plazos y BOE */}
@@ -546,12 +722,6 @@ export default function Game({ data }: { data: GameData }) {
             audio.sfx("coin");
           }}
         />
-      </div>
-
-      <div className="rotate-hint fixed inset-0 flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-center text-white">
-        <div className="text-6xl animate-bounce">📱⟳</div>
-        <p className="text-2xl font-bold">Gira el móvil en horizontal</p>
-        <p className="text-sm text-slate-300">El juego se adapta a pantalla completa apaisada.</p>
       </div>
     </div>
   );

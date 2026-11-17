@@ -192,12 +192,12 @@ export default function WorldMap({
           return (
             <section
               key={world.number}
-              className="flex w-[42cqw] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/20 shadow-2xl backdrop-blur"
+              className="flex w-[86vw] sm:w-[50vw] md:w-[42cqw] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/20 shadow-2xl backdrop-blur"
               style={{ background: `linear-gradient(180deg, ${theme.sky[0]}ee, ${theme.sky[1]}40 60%, #0b1020)` }}
             >
               <div className="flex items-center gap-[1.5cqw] bg-black/45 px-[2cqw] py-[1.2cqw]">
                 {world.bossImage && (
-                  <div className="relative h-[6cqw] w-[6cqw] shrink-0 overflow-hidden rounded-full border-2 border-amber-300/80 shadow-md">
+                  <div className="relative h-12 w-12 sm:h-[6cqw] sm:w-[6cqw] shrink-0 overflow-hidden rounded-full border-2 border-amber-300/80 shadow-md">
                     <Image
                       src={world.bossImage}
                       alt={world.title}
@@ -208,7 +208,7 @@ export default function WorldMap({
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[1.6cqw] font-bold uppercase tracking-wider text-amber-200">
+                  <p className="text-xs sm:text-[1.6cqw] font-bold uppercase tracking-wider text-amber-200">
                     {world.number === 0
                       ? "Mundo 0 · Tutorial"
                       : world.number === 7
@@ -216,8 +216,8 @@ export default function WorldMap({
                         : `Bloque ${world.number} (${world.stages.filter((s) => s.kind === "topic").length} temas oficiales)`}
                     {worldDone ? " · ✔ Superado" : ""}
                   </p>
-                  <h2 className="text-[2.4cqw] font-black leading-tight truncate">{world.title}</h2>
-                  <p className="text-[1.6cqw] text-slate-200 truncate">{world.subtitle}</p>
+                  <h2 className="text-sm sm:text-[2.4cqw] font-black leading-tight truncate">{world.title}</h2>
+                  <p className="text-xs sm:text-[1.6cqw] text-slate-200 truncate">{world.subtitle}</p>
                 </div>
               </div>
 
@@ -243,13 +243,13 @@ export default function WorldMap({
                               : "border-white/20 bg-black/50 hover:bg-black/70"
                         }`}
                       >
-                        <span className="grid h-[4.4cqw] w-[4.4cqw] shrink-0 place-items-center rounded-md bg-white/10 text-[2.2cqw]">
+                        <span className="grid h-8 w-8 sm:h-[4.4cqw] sm:w-[4.4cqw] shrink-0 place-items-center rounded-md bg-white/10 text-base sm:text-[2.2cqw]">
                           {unlocked ? icon : "🔒"}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[1.8cqw] font-bold text-amber-200">{stage.subtitle}</span>
-                          <span className="block truncate text-[2cqw] font-semibold">{stage.title}</span>
-                          <span className="block text-[1.6cqw] text-slate-300 truncate">
+                          <span className="block text-xs sm:text-[1.8cqw] font-bold text-amber-200">{stage.subtitle}</span>
+                          <span className="block truncate text-xs sm:text-[2cqw] font-semibold">{stage.title}</span>
+                          <span className="block text-[11px] sm:text-[1.6cqw] text-slate-300 truncate">
                             {stage.kind === "topic" && score ? `Prueba: ${score.score}/${score.total} aciertos` : ""}
                             {stage.kind === "topic" && topic?.needsReview ? " · ⚠ revisar (reforma BOE)" : ""}
                             {stage.kind === "tutorial" ? "Aprende a moverte y responder preguntas" : ""}

@@ -13,16 +13,7 @@
   touch-action: manipulation;
 }
 
+/* En móvil y tablet se puede jugar tanto en vertical (portrait) como apaisado (landscape) */
 .rotate-hint {
-  display: none;
-}
-
-/* En móviles en vertical se pide girar el dispositivo */
-@media (orientation: portrait) and (pointer: coarse) {
-  .game-frame {
-    display: none;
-  }
-  .rotate-hint {
-    display: flex;
-  }
+  display: none !important;
 }

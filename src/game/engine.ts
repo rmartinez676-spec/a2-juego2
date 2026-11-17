@@ -112,6 +112,8 @@ export interface Snapshot {
   bossName: string;
   bossHp: number;
   bossMax: number;
+  playerScreenX: number;
+  playerScreenY: number;
 }
 
 interface Box {
@@ -408,6 +410,8 @@ export class GameEngine {
 
   private emit(): void {
     const b = this.boss;
+    const px = this.p ? (this.p.x + this.p.w / 2 - this.camX) * RENDER_SCALE : CANVAS_W / 2;
+    const py = this.p ? (this.p.y + this.p.h / 2 - CAM_Y) * RENDER_SCALE : CANVAS_H / 2;
     this.onChange({
       overlay: this.overlay,
       lives: this.lives,
@@ -419,6 +423,8 @@ export class GameEngine {
       bossName: this.cfg.bossName,
       bossHp: b ? Math.max(0, b.hp) : 0,
       bossMax: b ? b.max : 0,
+      playerScreenX: px,
+      playerScreenY: py,
     });
   }
 
