@@ -209,7 +209,11 @@ export default function WorldMap({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[1.6cqw] font-bold uppercase tracking-wider text-amber-200">
-                    {world.number === 0 ? "Mundo 0 · Tutorial" : world.number === 7 ? "Mundo Final" : `Bloque ${world.number}`}
+                    {world.number === 0
+                      ? "Mundo 0 · Tutorial"
+                      : world.number === 7
+                        ? "Mundo Final"
+                        : `Bloque ${world.number} (${world.stages.filter((s) => s.kind === "topic").length} temas oficiales)`}
                     {worldDone ? " · ✔ Superado" : ""}
                   </p>
                   <h2 className="text-[2.4cqw] font-black leading-tight truncate">{world.title}</h2>

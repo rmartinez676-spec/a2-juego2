@@ -22,6 +22,7 @@ export function buildStages(data: GameData): Stage[] {
   const blocks = [...data.blocks].sort((a, b) => a.number - b.number);
   for (const block of blocks) {
     for (const topic of block.topics) {
+      const cleanTitle = topic.title.replace(/^Tema\s+\d+[\.:]?\s*/i, "");
       stages.push({
         key: `topic:${topic.id}`,
         kind: "topic",
@@ -29,8 +30,8 @@ export function buildStages(data: GameData): Stage[] {
         blockNumber: block.number,
         blockId: block.id,
         topicId: topic.id,
-        title: topic.title,
-        subtitle: `Tema ${block.number}.${topic.position}`,
+        title: cleanTitle,
+        subtitle: `Bloque ${block.number} · Tema ${topic.position}`,
       });
     }
     stages.push({

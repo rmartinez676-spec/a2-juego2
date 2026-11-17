@@ -76,20 +76,27 @@ export async function loadGameData(): Promise<GameData> {
     ]);
 
 
-  const questionsByTopic = new Map<number, QuestionDTO[]>();
-  for (const q of questionRows) {
-    if (q.topicId === null) continue;
-    const list = questionsByTopic.get(q.topicId) ?? [];
-    list.push({
-      id: q.id,
-      prompt: q.prompt,
-      options: q.options,
-      answer: q.answer,
-      explanation: q.explanation,
-      reference: q.reference,
-    });
-    questionsByTopic.set(q.topicId, list);
-  }
+    if (topicRows.length < 58 || blockRows.length !== 6) {
+      await ensureSeed(true);
+      return buildFallbackGameData();
+    }
+
+    const questionsByTopic = new Map<number, QuestionDTO[]>();
+    for (const q of questionRows) {
+      if (q.topicId === null) continue;
+      const list = questionsByTopic.get(q.topicId) ?? [];
+      list.push({
+        id: q.id,
+        prompt: q.prompt,
+        options: q.options,
+        answer: q.answer,
+        explanation: q.explanation,
+        reference: q.reference,
+        legalArticle: (q as { legalArticle?: string }).legalArticle,
+        legalText: (q as { legalText?: string }).legalText,
+      });
+      questionsByTopic.set(q.topicId, list);
+    }
 
   const topicsByBlock = new Map<number, TopicDTO[]>();
   for (const t of topicRows) {

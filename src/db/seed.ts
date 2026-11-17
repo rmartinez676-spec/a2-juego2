@@ -5,11 +5,11 @@ import { BOE_SOURCES, SYLLABUS } from "@/game/content/syllabus";
 
 let seedPromise: Promise<void> | null = null;
 
-// Inserta el temario inicial la primera vez que se usa la base de datos.
-export function ensureSeed(): Promise<void> {
+export function ensureSeed(force = false): Promise<void> {
   if (!hasDb || !db) return Promise.resolve();
+  if (force) seedPromise = null;
   if (!seedPromise) {
-    seedPromise = doSeed().catch((error: unknown) => {
+    seedPromise = doSeed(force).catch((error: unknown) => {
       seedPromise = null;
       throw error;
     });
@@ -17,13 +17,18 @@ export function ensureSeed(): Promise<void> {
   return seedPromise;
 }
 
-async function doSeed(): Promise<void> {
+async function doSeed(force = false): Promise<void> {
   if (!hasDb || !db) return;
-  const [{ value }] = await db.select({ value: count() }).from(blocks);
+  const expectedTotalTopics = SYLLABUS.reduce((acc, b) => acc + b.topics.length, 0);
+  const [{ value: currentTopics }] = await db.select({ value: count() }).from(topics);
 
-  if (Number(value) > 0) return;
+  if (!force && Number(currentTopics) === expectedTotalTopics) return;
 
   await db.transaction(async (tx) => {
+    // Limpia contenido previo desfasado para sincronizar con los 58 temas oficiales del BOE
+    await tx.delete(questions);
+    await tx.delete(topics);
+    await tx.delete(blocks);
     for (const block of SYLLABUS) {
       const [row] = await tx
         .insert(blocks)
